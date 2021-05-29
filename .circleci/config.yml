@@ -17,7 +17,7 @@ jobs:
                 command: |
                     poxy --verbose
             - persist_to_workspace:
-                root: /
+                root: .
                 paths: html
 
     deploy_dox:
@@ -27,7 +27,7 @@ jobs:
         steps:
             - checkout
             - attach_workspace:
-                at: html
+                at: .
             - run:
                 name: Disable jekyll builds
                 command: |
@@ -40,7 +40,7 @@ jobs:
                     git config user.name "ci-build"
             - add_ssh_keys:
                 fingerprints:
-                    - "a6:63:c0:a5:89:cf:2d:03:e7:c9:88:5d:c0:8c:39:e0"
+                    - "ae:e8:31:02:fc:41:43:44:48:47:4c:08:77:fb:14:f0"
             - run:
                 name: Deploy docs to gh-pages branch
                 command: gh-pages --dotfiles --message "[skip ci] Updates" --dist html
@@ -52,7 +52,7 @@ workflows:
             - generate_dox:
                 filters:
                     branches:
-                        only: master
+                        only: main
             - deploy_dox:
                 requires:
                     - generate_dox
