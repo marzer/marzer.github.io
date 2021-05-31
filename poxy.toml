@@ -1,0 +1,33 @@
+name = 'marzer.github.io'
+description = '''Personal devblog of Mark 'marzer' Gillard'''
+license = 'MIT'
+author = 'Mark Gillard'
+cpp = 29
+generate_tagfile = false
+show_includes = false
+navbar = [ 'pages' ]
+theme = 'light'
+
+[warnings]
+treat_as_errors = true
+
+[sources]
+patterns = [ '*.cpp', '*.md' ]
+strip_paths = '.'
+
+[examples]
+patterns = [ '*.cpp' ]
+
+[code_blocks]
+types = [
+    'matrix',
+    '[a-zA-Z_][a-zA-Z0-9_]*?_types',
+    '(?:mz::)?(?:impl::)?type_list_(?:select(?:or)?|slicer?)(?:_spec)?',
+    '(?:mz::)?type_list'
+]
+macros = [
+    'SCALAR_TYPES|TEMPLATE(?:_LIST)_TEST_CASE'
+]
+enums = [
+    '(?:mz::)?(?:impl::)?type_list_(?:selector|slicer)_spec::(?:arbitrary|low_index|prefix|skip_first_N|skip_page)',
+]
