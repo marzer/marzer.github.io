@@ -151,7 +151,8 @@ figure.m-figure
 }
 section > img
 {
-	margin: 2rem !important;
+	margin-top: 2rem !important;
+	margin-bottom: 2rem !important;
 }
 
 /* solid m-success boxes */
