@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8"/>
+  <title>Compilation speed humps: std::tuple | marzer.github.io Personal devblog of Mark 'marzer' Gillard</title>
+  <link href="https://fonts.googleapis.com/css?family=Libre+Baskerville:400,400i,700,700i%7CSource+Code+Pro:400,400i,600" rel="stylesheet"/>
+  <link href="m-light+documentation.compiled.css" rel="stylesheet"/>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <meta content="#cb4b16" name="theme-color"/>
+  <meta content="marzer.github.io" name="twitter:title"/>
+  <meta content="marzer.github.io" property="og:title"/>
+  <meta content="marzer.github.io" itemprop="name"/>
+  <meta content="Mark Gillard" name="author"/>
+  <meta content="Mark Gillard" property="article:author"/>
+  <meta content="Personal devblog of Mark 'marzer' Gillard" name="description"/>
+  <meta content="Personal devblog of Mark 'marzer' Gillard" name="twitter:description"/>
+  <meta content="Personal devblog of Mark 'marzer' Gillard" property="og:description"/>
+  <meta content="Personal devblog of Mark 'marzer' Gillard" itemprop="description"/>
+  <meta content="telephone=no" name="format-detection"/>
+  <meta content="Poxy v0.4.2" name="generator"/>
+  <meta content="no-referrer-when-downgrade" name="referrer"/>
+  <script type="application/ld+json">{
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "dateModified": "2021-05-31T22:21:18+00:00",
+    "headline": "Compilation speed humps: std::tuple | marzer.github.io Personal devblog of Mark 'marzer' Gillard"
+}</script>
+  <link href="poxy-0.4.2.css" rel="stylesheet"/>
+  <link href="poxy-0.4.2-light.css" rel="stylesheet"/>
+  <script src="poxy-0.4.2.js"></script>
+</head>
+<body>
+<header><nav id="navigation">
+  <div class="m-container">
+    <div class="m-row">
+      <a class="m-col-t-8 m-col-m-none m-left-m" href="index.html" id="m-navbar-brand">marzer.github.io <span class="m-thin">Personal devblog of Mark 'marzer' Gillard</span></a>
+      <div class="m-col-t-4 m-hide-m m-text-right m-nopadr">
+        <a class="m-doc-search-icon" href="#search" onclick="return showSearch()" title="Search"><svg style="height: 0.9rem;" viewBox="0 0 16 16">
+          <path d="m6 0c-3.31 0-6 2.69-6 6 0 3.31 2.69 6 6 6 1.49 0 2.85-0.541 3.89-1.44-0.0164 0.338 0.147 0.759 0.5 1.15l3.22 3.79c0.552 0.614 1.45 0.665 2 0.115 0.55-0.55 0.499-1.45-0.115-2l-3.79-3.22c-0.392-0.353-0.812-0.515-1.15-0.5 0.895-1.05 1.44-2.41 1.44-3.89 0-3.31-2.69-6-6-6zm0 1.56a4.44 4.44 0 0 1 4.44 4.44 4.44 4.44 0 0 1-4.44 4.44 4.44 4.44 0 0 1-4.44-4.44 4.44 4.44 0 0 1 4.44-4.44z" id="m-doc-search-icon-path"></path>
+        </svg></a>
+        <a href="#navigation" id="m-navbar-show" title="Show navigation"></a>
+        <a href="#" id="m-navbar-hide" title="Hide navigation"></a>
+      </div>
+      <div class="m-col-t-12 m-show-m m-col-m-none m-right-m" id="m-navbar-collapse">
+        <div class="m-row">
+          <ol class="m-col-t-12 m-col-m-none">
+            <li><a href="pages.html">Pages</a></li>
+          </ol>
+          <ol class="m-col-t-6 m-col-m-none" start="2">
+            <li class="m-show-m"><a class="m-doc-search-icon" href="#search" onclick="return showSearch()" title="Search"><svg style="height: 0.9rem;" viewBox="0 0 16 16">
+              <use href="#m-doc-search-icon-path"></use>
+            </svg></a></li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</nav></header>
+<main><article>
+  <div class="m-container m-container-inflatable">
+    <div class="m-row">
+      <div class="m-col-l-10 m-push-l-1">
+        <h1> Compilation speed humps: <a class="m-doc poxy-injected poxy-external" href="https://en.cppreference.com/w/cpp/utility/tuple" target="_blank">std::tuple</a>
+        </h1>
+        <div class="m-block m-default poxy-toc">
+          <h3>Contents</h3>
+          <ul>
+            <li><a href="#autotoc_md3">Background</a></li>
+            <li><a href="#autotoc_md4">Establishing a baseline</a></li>
+            <li><a href="#autotoc_md5">Finding the root cause with Clang's -ftime-trace</a></li>
+            <li><a href="#autotoc_md6">Pass 1: Eliminating std::tuple instantiations</a></li>
+            <li><a href="#autotoc_md7">Pass 2: Eliminating std::tuple</a></li>
+            <li><a href="#autotoc_md8">Pass 3: Specializing single-type selection</a></li>
+            <li><a href="#autotoc_md9">Pass 4: Specializing slice prefix selection</a></li>
+            <li><a href="#autotoc_md10">Pass 5: Pagination</a></li>
+            <li><a href="#autotoc_md11">Conclusion</a></li>
+          </ul>
+        </div>
+<p>Recently I refactored the CI test harnesses for an as-yet-unreleased project, only to find after doing so that compile times on the CI server had ballooned from around 7 minutes to 35+ minutes. Deciding that my wallet simply could not take the hit, I set myself on a mission to get that figure back down to something reasonable, and after a day spent with clang's <a class="poxy-external" href="https://github.com/aras-p/llvm-project-20170507/pull/2" target="_blank"><code>-ftime-trace</code></a> I was able to find the root cause: <a class="m-doc-external poxy-external" href="http://en.cppreference.com/w/cpp/utility/tuple.html" target="_blank">std::<wbr/>tuple</a>. This post is a recap of what I found and how I fixed it.</p><section id="autotoc_md3"><h2><a href="#autotoc_md3">Background</a></h2><p>The project in question has a number of math types that required testing with all arithmetic types, and for different extents (e.g. <code>vector&lt;float, 2&gt;</code>, <code>vector&lt;float, 3&gt;</code>, <code>vector&lt;double, 2&gt;</code>, etc.). Wanting to parameterize this by type, but also being fairly new to unit testing when I put the project's tests together, I came up with the home-brew solution of sticking the tests in a header which would be included in multiple translation units with different <code>#defines</code> for specifying the template type, e.g.:</p><pre class="m-code"><span class="c1">// test_vec2_float.cpp</span>
+<span class="cp">#define SCALAR_TYPE float</span>
+<span class="cp">#define DIMENSIONS  2</span>
+<span class="cp">#include</span> <span class="cpf">"vector_tests.h"</span></pre><p>Very tedious to maintain, but the codebase was small, so I didn't really dig any deeper. Once the project grew, however, this method became a huge PITA. If you've written unit tests in C++ you can likely see where this is going.</p><p>C++ unit test frameworks invariably have a means of parameterizing a test case by type so you can test a class or function template for many types and only need to write the test code once. In <a class="poxy-external" href="https://github.com/catchorg/Catch2" target="_blank">Catch2</a>, which is the framework I use, there's two primary facilities for doing this:</p><ul><li><a class="poxy-external" href="https://github.com/catchorg/Catch2/blob/devel/docs/test-cases-and-sections.md#type-parametrised-test-cases" target="_blank">TEMPLATE_<wbr/>TEST_<wbr/>CASE</a> - requires you to explicitly list the type arguments</li><li><a class="poxy-external" href="https://github.com/catchorg/Catch2/blob/devel/docs/test-cases-and-sections.md#type-parametrised-test-cases" target="_blank">TEMPLATE_<wbr/>LIST_<wbr/>TEST_<wbr/>CASE</a> - extracts the types from some variadic type list (e.g. <a class="m-doc-external poxy-external" href="http://en.cppreference.com/w/cpp/utility/tuple.html" target="_blank">std::<wbr/>tuple</a>)</li></ul><p>When seeking to refactor my terrible homebrew solution into something more maintainable I chose <a class="poxy-external" href="https://github.com/catchorg/Catch2/blob/devel/docs/test-cases-and-sections.md#type-parametrised-test-cases" target="_blank">TEMPLATE_<wbr/>LIST_<wbr/>TEST_<wbr/>CASE</a> combined with <a class="m-doc-external poxy-external" href="http://en.cppreference.com/w/cpp/utility/tuple.html" target="_blank">std::<wbr/>tuple</a> and some macros for listing arithmetic types, e.g:</p><pre class="m-code"><span class="cp">#define SCALAR_TYPES short, int, long, long long, float, double </span><span class="c1">// ... etc</span>
+
+<span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span><span class="p">...</span> <span class="ut">T</span><span class="o">&gt;</span>
+<span class="k">using</span> <span class="ut">all_matrix_types</span> <span class="o">=</span> <span class="ns">std</span><span class="o">::</span><span class="ut">tuple</span><span class="o">&lt;</span>
+    <span class="ut">matrix</span><span class="o">&lt;</span><span class="ut">T</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="o">&gt;</span><span class="p">...,</span> <span class="ut">matrix</span><span class="o">&lt;</span><span class="ut">T</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;</span><span class="p">...,</span> <span class="ut">matrix</span><span class="o">&lt;</span><span class="ut">T</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;</span><span class="p">...,</span> <span class="ut">matrix</span><span class="o">&lt;</span><span class="ut">T</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">5</span><span class="o">&gt;</span><span class="p">...,</span>
+    <span class="ut">matrix</span><span class="o">&lt;</span><span class="ut">T</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">2</span><span class="o">&gt;</span><span class="p">...,</span> <span class="ut">matrix</span><span class="o">&lt;</span><span class="ut">T</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;</span><span class="p">...,</span> <span class="ut">matrix</span><span class="o">&lt;</span><span class="ut">T</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;</span><span class="p">...,</span> <span class="ut">matrix</span><span class="o">&lt;</span><span class="ut">T</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">5</span><span class="o">&gt;</span><span class="p">...,</span>
+    <span class="ut">matrix</span><span class="o">&lt;</span><span class="ut">T</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">2</span><span class="o">&gt;</span><span class="p">...,</span> <span class="ut">matrix</span><span class="o">&lt;</span><span class="ut">T</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;</span><span class="p">...,</span> <span class="ut">matrix</span><span class="o">&lt;</span><span class="ut">T</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;</span><span class="p">...,</span> <span class="ut">matrix</span><span class="o">&lt;</span><span class="ut">T</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="o">&gt;</span><span class="p">...,</span>
+    <span class="ut">matrix</span><span class="o">&lt;</span><span class="ut">T</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">2</span><span class="o">&gt;</span><span class="p">...,</span> <span class="ut">matrix</span><span class="o">&lt;</span><span class="ut">T</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;</span><span class="p">...,</span> <span class="ut">matrix</span><span class="o">&lt;</span><span class="ut">T</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;</span><span class="p">...,</span> <span class="ut">matrix</span><span class="o">&lt;</span><span class="ut">T</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">5</span><span class="o">&gt;</span><span class="p">...</span>
+<span class="o">&gt;</span><span class="p">;</span>
+
+<span class="m">TEMPLATE_LIST_TEST_CASE</span><span class="p">(</span><span class="s">"some tests"</span><span class="p">,</span> <span class="s">""</span><span class="p">,</span> <span class="ut">all_matrix_types</span><span class="o">&lt;</span><span class="m">SCALAR_TYPES</span><span class="o">&gt;</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="c1">// ...</span>
+<span class="p">}</span></pre><p>While being a lot cleaner (all being in one TU), this had the problem of being an absolute <em>dog</em> to compile, even on my Ryzen 3950X. And of course! There's no way for a build system to parallellize this because it's all just one translation unit. (Not to mention GCC required so much RAM to build it that it would go OOM and crash.) While being a mess to maintain, my previous solution was at least trivially consumable.</p><p>Not wanting to undo my refactor, I settled on a solution that would slice the <a class="m-doc-external poxy-external" href="http://en.cppreference.com/w/cpp/utility/tuple.html" target="_blank">std::<wbr/>tuple</a> into sub-tuples based on a per-TU batch number (set using <code>-DBATCH_INDEX=N</code>). Now it would compile on my machine, and seemed relatively performant. Hooray! (But, again. Ryzen 3950X.) Once up on CircleCI the problem became obvious:</p><figure class="m-figure"><img alt="Image" src="tuple_circle_ci_slow.png"/><figcaption>35 minutes? No thanks.</figcaption></figure><p>Clearly something was still amiss.</p></section><section id="autotoc_md4"><h2><a href="#autotoc_md4">Establishing a baseline</a></h2><p>Since I've already applied the fixes and this write-up is being done post-mortem, the rest of this article will be based on a synthetic re-creation of the problem. The names of types and functions have been changed to protect the innocent.</p><p>With that established, here's how long the 'vanilla' code took to compile:</p><table class="m-table"><thead><tr><th></th><th>Clang 12</th><th>GCC 10</th><th>MSVC 19.29</th></tr></thead><tbody><tr><td>baseline</td><td>8.568s</td><td>7.439s</td><td>11.320s</td></tr></tbody></table></section><section id="autotoc_md5"><h2><a href="#autotoc_md5">Finding the root cause with Clang's -ftime-trace</a></h2><p>First step was to determine where the compilers were spending most of their time. One way of doing that is to use clang's <a class="poxy-external" href="https://github.com/aras-p/llvm-project-20170507/pull/2" target="_blank"><code>-ftime-trace</code></a> flag, introduced in LLVM 9.0. Specifying <a class="poxy-external" href="https://github.com/aras-p/llvm-project-20170507/pull/2" target="_blank"><code>-ftime-trace</code></a> causes clang to spit out compilation timing data as JSON files next to .obj files they correspond to. These files can then be dumped into chrome's <code>chrome://tracing</code> (or something like <a class="poxy-external" href="https://www.speedscope.app/" target="_blank">speedscope</a> if you're allergic to Chrome like I am), allowing you to get a good birds-eye view of the work the compiler needs to do to bring your code to life.</p><p class="m-note m-info"> Obviously <code>-ftime-trace</code> won't map exactly to the work done by GCC and MSVC, but it usually holds that doing sane things to make code compile faster in clang will also have a positive impact on the time taken by other compilers.</p></section><section id="autotoc_md6"><h2><a href="#autotoc_md6">Pass 1: Eliminating std::tuple instantiations</a></h2><p>Using <code>-ftime-trace</code> with the code in question immediately gave me a very strong signal of where to start:</p><img alt="Image" class="m-image" src="tuple_flamegraph_1.jpg"/><p>The part in the red box is the instantiation chain for <a class="m-doc-external poxy-external" href="http://en.cppreference.com/w/cpp/utility/tuple.html" target="_blank">std::<wbr/>tuple</a>; since it is (typically) implemented recursively, instantiating something like <code><a class="m-doc-external poxy-external" href="http://en.cppreference.com/w/cpp/utility/tuple.html" target="_blank">std::<wbr/>tuple</a>&lt;int, float, double&gt;</code> requires instantiating <code><a class="m-doc-external poxy-external" href="http://en.cppreference.com/w/cpp/utility/tuple.html" target="_blank">std::<wbr/>tuple</a>&lt;int, float&gt;</code>, and soforth, meaning an awful lot of work goes into creating constructors, copy operators, destructors, et cetera.</p><p>The solution here was simple: don't instantiate it! This turned out to be very low-hanging fruit- the only reason the tuples were even being explicitly instantiated at all was my lazy re-use of a library utility function I already had to select subsets of tuples:</p><pre class="m-code"><span class="k">template</span> <span class="o">&lt;</span><span class="ut"><a class="m-doc poxy-injected poxy-external" href="https://en.cppreference.com/w/cpp/types/size_t" target="_blank">size_t</a></span> <span class="n">Offset</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="k">typename</span> <span class="nc">Tuple</span><span class="p">,</span> <span class="ut"><a class="m-doc poxy-injected poxy-external" href="https://en.cppreference.com/w/cpp/types/size_t" target="_blank">size_t</a></span><span class="p">...</span> <span class="n">Indices</span><span class="o">&gt;</span>
+<span class="k">constexpr</span> <span class="k">auto</span> <span class="n">tuple_subset</span><span class="p">(</span><span class="n">Tuple</span><span class="o">&amp;&amp;</span> <span class="n">tpl</span><span class="p">,</span> <span class="ns">std</span><span class="o">::</span><span class="ut">index_sequence</span><span class="o">&lt;</span><span class="n">Indices</span><span class="p">...</span><span class="o">&gt;</span><span class="p">)</span> <span class="k">noexcept</span>
+<span class="p">{</span>
+    <span class="k">return</span> <span class="ns">std</span><span class="o">::</span><span class="n">make_tuple</span><span class="p">(</span><span class="ns">std</span><span class="o">::</span><span class="n">get</span><span class="o">&lt;</span><span class="n">Indices</span> <span class="o">+</span> <span class="n">Offset</span><span class="o">&gt;</span><span class="p">(</span><span class="k"><a class="m-doc poxy-injected poxy-external" href="https://en.cppreference.com/w/cpp/language/static_cast" target="_blank">static_cast</a></span><span class="o">&lt;</span><span class="n">Tuple</span><span class="o">&amp;&amp;&gt;</span><span class="p">(</span><span class="n">tpl</span><span class="p">))...);</span>
+<span class="p">}</span>
+
+<span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="nc">Tuple</span><span class="p">,</span> <span class="ut"><a class="m-doc poxy-injected poxy-external" href="https://en.cppreference.com/w/cpp/types/size_t" target="_blank">size_t</a></span> <span class="n">Start</span><span class="p">,</span> <span class="ut"><a class="m-doc poxy-injected poxy-external" href="https://en.cppreference.com/w/cpp/types/size_t" target="_blank">size_t</a></span> <span class="n">Length</span><span class="o">&gt;</span>
+<span class="k">using</span> <span class="ut">tuple_slice</span> <span class="o">=</span> <span class="k">decltype</span><span class="p">(</span>
+    <span class="n">tuple_subset</span><span class="o">&lt;</span><span class="n">Start</span><span class="o">&gt;</span><span class="p">(</span><span class="ns">std</span><span class="o">::</span><span class="n">declval</span><span class="o">&lt;</span><span class="n">Tuple</span><span class="o">&gt;</span><span class="p">(),</span> <span class="ns">std</span><span class="o">::</span><span class="ut">make_index_sequence</span><span class="o">&lt;</span><span class="n">Length</span><span class="o">&gt;</span><span class="p">{})</span>
+<span class="p">);</span></pre><p>I realized could eliminate the instantiations necessary to compile that function by implementing the 'slicer' machinery using template specialization instead:</p><pre class="m-code"><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span><span class="p">,</span> <span class="ut"><a class="m-doc poxy-injected poxy-external" href="https://en.cppreference.com/w/cpp/types/size_t" target="_blank">size_t</a></span><span class="p">,</span> <span class="k">typename</span><span class="o">&gt;</span>
+<span class="k">struct</span> <span class="nc">tuple_slicer</span><span class="p">;</span>
+
+<span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="nc">Tuple</span><span class="p">,</span> <span class="ut"><a class="m-doc poxy-injected poxy-external" href="https://en.cppreference.com/w/cpp/types/size_t" target="_blank">size_t</a></span> <span class="n">Start</span><span class="p">,</span> <span class="ut"><a class="m-doc poxy-injected poxy-external" href="https://en.cppreference.com/w/cpp/types/size_t" target="_blank">size_t</a></span><span class="p">...</span> <span class="n">Indices</span><span class="o">&gt;</span>
+<span class="k">struct</span> <span class="nc">tuple_slicer</span><span class="o">&lt;</span><span class="n">Tuple</span><span class="p">,</span> <span class="n">Start</span><span class="p">,</span> <span class="ns">std</span><span class="o">::</span><span class="ut">index_sequence</span><span class="o">&lt;</span><span class="n">Indices</span><span class="p">...</span><span class="o">&gt;&gt;</span>
+<span class="p">{</span>
+    <span class="k">using</span> <span class="ut">type</span> <span class="o">=</span> <span class="ns">std</span><span class="o">::</span><span class="ut">tuple</span><span class="o">&lt;</span><span class="ns">std</span><span class="o">::</span><span class="ut">tuple_element_t</span><span class="o">&lt;</span><span class="n">Start</span> <span class="o">+</span> <span class="n">Indices</span><span class="p">,</span> <span class="n">Tuple</span><span class="o">&gt;</span><span class="p">...</span><span class="o">&gt;</span><span class="p">;</span>
+<span class="p">};</span>
+
+<span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="nc">Tuple</span><span class="p">,</span> <span class="ut"><a class="m-doc poxy-injected poxy-external" href="https://en.cppreference.com/w/cpp/types/size_t" target="_blank">size_t</a></span> <span class="n">Start</span><span class="p">,</span> <span class="ut"><a class="m-doc poxy-injected poxy-external" href="https://en.cppreference.com/w/cpp/types/size_t" target="_blank">size_t</a></span> <span class="n">Length</span><span class="o">&gt;</span>
+<span class="k">using</span> <span class="ut">tuple_slice</span> <span class="o">=</span> <span class="k">typename</span> <span class="nc">tuple_slicer</span><span class="o">&lt;</span><span class="n">Tuple</span><span class="p">,</span> <span class="n">Start</span><span class="p">,</span> <span class="ns">std</span><span class="o">::</span><span class="ut">make_index_sequence</span><span class="o">&lt;</span><span class="n">Length</span><span class="o">&gt;&gt;::</span><span class="n">type</span><span class="p">;</span></pre><table class="m-table"><thead><tr><th></th><th>Clang 12</th><th>GCC 10</th><th>MSVC 19.29</th></tr></thead><tbody><tr><td>baseline</td><td>8.568s</td><td>7.439s</td><td>11.320s</td></tr><tr><td><strong>eliminating <a class="m-doc-external poxy-external" href="http://en.cppreference.com/w/cpp/utility/tuple.html" target="_blank">std::<wbr/>tuple</a> instantiations</strong></td><td><strong>6.949s</strong></td><td><strong>3.608s</strong></td><td><strong>8.421s</strong></td></tr></tbody></table><p>GCC seemed pretty happy with just that, but even 3.6 seconds for one TU was not going to cut it. I needed to go deeper.</p></section><section id="autotoc_md7"><h2><a href="#autotoc_md7">Pass 2: Eliminating std::tuple</a></h2><p>Even after eliminating all the <a class="m-doc-external poxy-external" href="http://en.cppreference.com/w/cpp/utility/tuple.html" target="_blank">std::<wbr/>tuple</a> instantiations the trace graph was still a mess:</p><img alt="Image" class="m-image" src="tuple_flamegraph_2.jpg"/><p>It was at this point it became apparent that the only way forward would be to get rid of <a class="m-doc-external poxy-external" href="http://en.cppreference.com/w/cpp/utility/tuple.html" target="_blank">std::<wbr/>tuple</a> altogether; no matter how I re-wrote my test machinery, the tuple itself was always the cause of the instantiation explosion you see above, largely thanks to <code><a class="m-doc poxy-injected poxy-external" href="https://en.cppreference.com/w/cpp/utility/tuple/tuple_element" target="_blank">std::tuple_element</a></code>.</p><p>Good thing I didn't need any of <a class="m-doc-external poxy-external" href="http://en.cppreference.com/w/cpp/utility/tuple.html" target="_blank">std::<wbr/>tuple</a>'s runtime semantics. Any variadic template type would do, as long as I could easily extract:</p><ul><li>the number of types in the list</li><li>a type at a specific index</li><li>a slice of the types (start + length)</li></ul><p>Enter the <code>type_list</code>:</p><pre class="m-code"><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span><span class="p">...</span> <span class="ut">T</span><span class="o">&gt;</span>
+<span class="k">struct</span> <span class="nc">type_list</span><span class="p">;</span>
+
+<span class="k">namespace</span> <span class="n">impl</span>
+<span class="p">{</span>
+    <span class="c1">// ================================= selector =================================</span>
+
+    <span class="k">enum</span> <span class="k">class</span> <span class="nc">type_list_selector_spec</span> <span class="o">:</span> <span class="k">int</span>
+    <span class="p">{</span>
+        <span class="n">arbitrary</span>
+    <span class="p">};</span>
+
+    <span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="nc">List</span><span class="p">,</span> <span class="ut"><a class="m-doc poxy-injected poxy-external" href="https://en.cppreference.com/w/cpp/types/size_t" target="_blank">size_t</a></span> <span class="n">N</span><span class="p">,</span> <span class="ut">type_list_selector_spec</span> <span class="n">Spec</span> <span class="o">=</span> <span class="cm">/* ... */</span><span class="o">&gt;</span>
+    <span class="k">struct</span> <span class="nc">type_list_selector</span><span class="p">;</span>
+
+    <span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="nc">T0</span><span class="p">,</span> <span class="k">typename</span><span class="p">...</span> <span class="ut">T</span><span class="o">&gt;</span>
+    <span class="k">struct</span> <span class="nc">type_list_selector</span><span class="o">&lt;</span><span class="ut">type_list</span><span class="o">&lt;</span><span class="ut">T0</span><span class="p">,</span> <span class="ut">T</span><span class="p">...</span><span class="o">&gt;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="ut">type_list_selector_spec</span><span class="o">::</span><span class="ne">arbitrary</span><span class="o">&gt;</span>
+    <span class="p">{</span>
+        <span class="k">using</span> <span class="ut">type</span> <span class="o">=</span> <span class="ut">T0</span><span class="p">;</span>
+    <span class="p">};</span>
+    <span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="nc">T0</span><span class="p">,</span> <span class="k">typename</span><span class="p">...</span> <span class="ut">T</span><span class="p">,</span> <span class="ut"><a class="m-doc poxy-injected poxy-external" href="https://en.cppreference.com/w/cpp/types/size_t" target="_blank">size_t</a></span> <span class="n">N</span><span class="o">&gt;</span>
+    <span class="k">struct</span> <span class="nc">type_list_selector</span><span class="o">&lt;</span><span class="ut">type_list</span><span class="o">&lt;</span><span class="ut">T0</span><span class="p">,</span> <span class="ut">T</span><span class="p">...</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">N</span><span class="p">,</span> <span class="ut">type_list_selector_spec</span><span class="o">::</span><span class="ne">arbitrary</span><span class="o">&gt;</span>
+    <span class="p">{</span>
+        <span class="k">using</span> <span class="ut">type</span> <span class="o">=</span> <span class="k">typename</span> <span class="nc">type_list_selector_</span><span class="o">&lt;</span><span class="ut">type_list</span><span class="o">&lt;</span><span class="ut">T</span><span class="p">...</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">N</span> <span class="o">-</span> <span class="mi">1</span><span class="o">&gt;::</span><span class="n">type</span><span class="p">;</span>
+    <span class="p">};</span>
+
+    <span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="nc">List</span><span class="p">,</span> <span class="ut"><a class="m-doc poxy-injected poxy-external" href="https://en.cppreference.com/w/cpp/types/size_t" target="_blank">size_t</a></span> <span class="n">N</span><span class="o">&gt;</span>
+    <span class="k">using</span> <span class="ut">type_list_select</span> <span class="o">=</span> <span class="k">typename</span> <span class="nc">type_list_selector</span><span class="o">&lt;</span><span class="n">List</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;::</span><span class="n">type</span><span class="p">;</span>
+
+    <span class="c1">// ================================= slicer =================================</span>
+
+    <span class="k">enum</span> <span class="k">class</span> <span class="nc">type_list_slicer_spec</span> <span class="o">:</span> <span class="k">int</span>
+    <span class="p">{</span>
+        <span class="n">arbitrary</span>
+    <span class="p">};</span>
+
+    <span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="nc">List</span><span class="p">,</span> <span class="ut"><a class="m-doc poxy-injected poxy-external" href="https://en.cppreference.com/w/cpp/types/size_t" target="_blank">size_t</a></span> <span class="n">Start</span><span class="p">,</span> <span class="ut"><a class="m-doc poxy-injected poxy-external" href="https://en.cppreference.com/w/cpp/types/size_t" target="_blank">size_t</a></span> <span class="n">Length</span><span class="p">,</span> <span class="ut">type_list_slicer_spec</span> <span class="n">Spec</span> <span class="o">=</span> <span class="cm">/* ... */</span><span class="o">&gt;</span>
+    <span class="k">struct</span> <span class="nc">type_list_slicer</span><span class="p">;</span>
+
+    <span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span><span class="p">,</span> <span class="ut"><a class="m-doc poxy-injected poxy-external" href="https://en.cppreference.com/w/cpp/types/size_t" target="_blank">size_t</a></span><span class="p">,</span> <span class="k">typename</span><span class="o">&gt;</span>
+    <span class="k">struct</span> <span class="nc">type_list_arbitrary_sequence_slicer</span><span class="p">;</span>
+
+    <span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="nc">List</span><span class="p">,</span> <span class="ut"><a class="m-doc poxy-injected poxy-external" href="https://en.cppreference.com/w/cpp/types/size_t" target="_blank">size_t</a></span> <span class="n">Start</span><span class="p">,</span> <span class="ut"><a class="m-doc poxy-injected poxy-external" href="https://en.cppreference.com/w/cpp/types/size_t" target="_blank">size_t</a></span><span class="p">...</span> <span class="n">Seq</span><span class="o">&gt;</span>
+    <span class="k">struct</span> <span class="nc">type_list_arbitrary_sequence_slicer</span><span class="o">&lt;</span><span class="n">List</span><span class="p">,</span> <span class="n">Start</span><span class="p">,</span> <span class="ns">std</span><span class="o">::</span><span class="ut">index_sequence</span><span class="o">&lt;</span><span class="n">Seq</span><span class="p">...</span><span class="o">&gt;&gt;</span>
+    <span class="p">{</span>
+        <span class="k">using</span> <span class="ut">type</span> <span class="o">=</span> <span class="ut">type_list</span><span class="o">&lt;</span><span class="ut">type_list_select</span><span class="o">&lt;</span><span class="n">List</span><span class="p">,</span> <span class="n">Start</span> <span class="o">+</span> <span class="n">Seq</span><span class="o">&gt;</span><span class="p">...</span><span class="o">&gt;</span><span class="p">;</span>
+    <span class="p">};</span>
+
+    <span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="nc">List</span><span class="p">,</span> <span class="ut"><a class="m-doc poxy-injected poxy-external" href="https://en.cppreference.com/w/cpp/types/size_t" target="_blank">size_t</a></span> <span class="n">Start</span><span class="p">,</span> <span class="ut"><a class="m-doc poxy-injected poxy-external" href="https://en.cppreference.com/w/cpp/types/size_t" target="_blank">size_t</a></span> <span class="n">Length</span><span class="o">&gt;</span>
+    <span class="k">struct</span> <span class="nc">type_list_slicer_</span><span class="o">&lt;</span><span class="n">List</span><span class="p">,</span> <span class="n">Start</span><span class="p">,</span> <span class="n">Length</span><span class="p">,</span> <span class="ut">type_list_slicer_spec</span><span class="o">::</span><span class="ne">arbitrary</span><span class="o">&gt;</span>
+        <span class="o">:</span> <span class="n">type_list_arbitrary_sequence_slicer</span><span class="o">&lt;</span><span class="n">List</span><span class="p">,</span> <span class="n">Start</span><span class="p">,</span> <span class="ns">std</span><span class="o">::</span><span class="ut">make_index_sequence</span><span class="o">&lt;</span><span class="n">Length</span><span class="o">&gt;&gt;</span>
+    <span class="p">{};</span>
+
+    <span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="nc">List</span><span class="p">,</span> <span class="ut"><a class="m-doc poxy-injected poxy-external" href="https://en.cppreference.com/w/cpp/types/size_t" target="_blank">size_t</a></span> <span class="n">Start</span><span class="p">,</span> <span class="ut"><a class="m-doc poxy-injected poxy-external" href="https://en.cppreference.com/w/cpp/types/size_t" target="_blank">size_t</a></span> <span class="n">Length</span><span class="o">&gt;</span>
+    <span class="k">using</span> <span class="ut">type_list_slice</span> <span class="o">=</span> <span class="k">typename</span> <span class="nc">type_list_slicer</span><span class="o">&lt;</span><span class="n">List</span><span class="p">,</span> <span class="n">Start</span><span class="p">,</span> <span class="n">Length</span><span class="o">&gt;::</span><span class="n">type</span><span class="p">;</span>
+
+<span class="p">}</span>
+
+<span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span><span class="p">...</span> <span class="ut">T</span><span class="o">&gt;</span>
+<span class="k">struct</span> <span class="nc">type_list</span>
+<span class="p">{</span>
+    <span class="k">static</span> <span class="k">constexpr</span> <span class="ut"><a class="m-doc poxy-injected poxy-external" href="https://en.cppreference.com/w/cpp/types/size_t" target="_blank">size_t</a></span> <span class="n">length</span> <span class="o">=</span> <span class="k">sizeof</span><span class="p">...(</span><span class="ut">T</span><span class="p">);</span>
+
+    <span class="k">template</span> <span class="o">&lt;</span><span class="ut"><a class="m-doc poxy-injected poxy-external" href="https://en.cppreference.com/w/cpp/types/size_t" target="_blank">size_t</a></span> <span class="n">Index</span><span class="o">&gt;</span>
+    <span class="k">using</span> <span class="ut">select</span> <span class="o">=</span> <span class="n">impl</span><span class="o">::</span><span class="ut">type_list_select</span><span class="o">&lt;</span><span class="ut">type_list</span><span class="o">&lt;</span><span class="ut">T</span><span class="p">...</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">Index</span><span class="o">&gt;</span><span class="p">;</span>
+
+    <span class="k">template</span> <span class="o">&lt;</span><span class="ut"><a class="m-doc poxy-injected poxy-external" href="https://en.cppreference.com/w/cpp/types/size_t" target="_blank">size_t</a></span> <span class="n">SliceStart</span><span class="p">,</span> <span class="ut"><a class="m-doc poxy-injected poxy-external" href="https://en.cppreference.com/w/cpp/types/size_t" target="_blank">size_t</a></span> <span class="n">SliceLength</span> <span class="o">=</span> <span class="p">(</span><span class="n">length</span> <span class="o">-</span> <span class="n">SliceStart</span><span class="p">)</span><span class="o">&gt;</span>
+    <span class="k">using</span> <span class="ut">slice</span> <span class="o">=</span> <span class="n">impl</span><span class="o">::</span><span class="ut">type_list_slice</span><span class="o">&lt;</span><span class="ut">type_list</span><span class="o">&lt;</span><span class="ut">T</span><span class="p">...</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">SliceStart</span><span class="p">,</span> <span class="n">SliceLength</span><span class="o">&gt;</span><span class="p">;</span>
+<span class="p">};</span></pre><p>After replacing the tuples with <code>type_list</code>:</p><table class="m-table"><thead><tr><th></th><th>Clang 12</th><th>GCC 10</th><th>MSVC 19.29</th></tr></thead><tbody><tr><td>baseline</td><td>8.568s</td><td>7.439s</td><td>11.320s</td></tr><tr><td>eliminating <a class="m-doc-external poxy-external" href="http://en.cppreference.com/w/cpp/utility/tuple.html" target="_blank">std::<wbr/>tuple</a> instantiations</td><td>6.949s</td><td>3.608s</td><td>8.421s</td></tr><tr><td><strong>eliminating <a class="m-doc-external poxy-external" href="http://en.cppreference.com/w/cpp/utility/tuple.html" target="_blank">std::<wbr/>tuple</a></strong></td><td><strong>6.664s</strong></td><td><strong>3.418s</strong></td><td><strong>9.802s</strong></td></tr></tbody></table><p>Hmmmm. Womp-womp. Let's take a look at the trace graph:</p><img alt="Image" class="m-image" src="tuple_flamegraph_3.jpg"/><p>Somewhat unsurprisingly it looks very similar to the <a class="m-doc-external poxy-external" href="http://en.cppreference.com/w/cpp/utility/tuple.html" target="_blank">std::<wbr/>tuple</a> one, only this time the instantiation cost is paid using my helper templates, rather than the ones from the standard library. This was a blessing in disguise, though! Since I had complete control over <code>type_list</code> I could play around with how the various helpers were instantiated.</p></section><section id="autotoc_md8"><h2><a href="#autotoc_md8">Pass 3: Specializing single-type selection</a></h2><p>The <code>type_list_selector</code> used to select types at a specific index was being instantiated recursively. I could eliminate that recusion by specializing the selector for the first N types in the list:</p><pre class="m-code"><span class="k">enum</span> <span class="k">class</span> <span class="nc">type_list_selector_spec</span> <span class="o">:</span> <span class="k">int</span>
+<span class="p">{</span>
+    <span class="n">arbitrary</span><span class="p">,</span>
+    <span class="n">low_index</span> <span class="c1">// new</span>
+<span class="p">};</span>
+
+<span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="nc">T0</span><span class="p">,</span> <span class="k">typename</span><span class="p">...</span> <span class="ut">T</span><span class="o">&gt;</span>
+<span class="k">struct</span> <span class="nc">type_list_selector</span><span class="o">&lt;</span><span class="ut">type_list</span><span class="o">&lt;</span><span class="ut">T0</span><span class="p">,</span> <span class="ut">T</span><span class="p">...</span><span class="o">&gt;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="ut">type_list_selector_spec</span><span class="o">::</span><span class="ne">low_index</span><span class="o">&gt;</span>
+<span class="p">{</span>
+    <span class="k">using</span> <span class="ut">type</span> <span class="o">=</span> <span class="ut">T0</span><span class="p">;</span>
+<span class="p">};</span>
+
+<span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="nc">T0</span><span class="p">,</span> <span class="k">typename</span> <span class="nc">T1</span><span class="p">,</span> <span class="k">typename</span><span class="p">...</span> <span class="ut">T</span><span class="o">&gt;</span>
+<span class="k">struct</span> <span class="nc">type_list_selector</span><span class="o">&lt;</span><span class="ut">type_list</span><span class="o">&lt;</span><span class="ut">T0</span><span class="p">,</span> <span class="ut">T1</span><span class="p">,</span> <span class="ut">T</span><span class="p">...</span><span class="o">&gt;</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="ut">type_list_selector_spec</span><span class="o">::</span><span class="ne">low_index</span><span class="o">&gt;</span>
+<span class="p">{</span>
+    <span class="k">using</span> <span class="ut">type</span> <span class="o">=</span> <span class="ut">T1</span><span class="p">;</span>
+<span class="p">};</span>
+
+<span class="c1">// ... and so on.</span></pre><p>Assuming a good value for N this should eliminate a good chunk of the recursion required. I chose 64. Let's see:</p><table class="m-table"><thead><tr><th></th><th>Clang 12</th><th>GCC 10</th><th>MSVC 19.29</th></tr></thead><tbody><tr><td>baseline</td><td>8.568s</td><td>7.439s</td><td>11.320s</td></tr><tr><td>eliminating <a class="m-doc-external poxy-external" href="http://en.cppreference.com/w/cpp/utility/tuple.html" target="_blank">std::<wbr/>tuple</a> instantiations</td><td>6.949s</td><td>3.608s</td><td>8.421s</td></tr><tr><td>eliminating <a class="m-doc-external poxy-external" href="http://en.cppreference.com/w/cpp/utility/tuple.html" target="_blank">std::<wbr/>tuple</a></td><td>6.664s</td><td>3.418s</td><td>9.802s</td></tr><tr><td><strong>specializing single-type selection &lt; 64</strong></td><td><strong>7.544s</strong></td><td><strong>9.261s</strong></td><td><strong>CRASH</strong></td></tr></tbody></table><p>...</p><p>Oh.</p><img alt="Image" class="m-image" src="everyone_disliked_that.jpg"/><p>Still, the trace graph did show that the compiler spent far less time instantiating selectors for types 0 - 63. At this point it occurred to me that the <code>type_list</code> in question was hundreds of types long; unless I specialized the selector for thousands of types the compiler was still having to do a lot of work. Instead I moved on to the multi-type range 'slicer'.</p></section><section id="autotoc_md9"><h2><a href="#autotoc_md9">Pass 4: Specializing slice prefix selection</a></h2><p>There's a few cases of low-hanging fruit when talking slice specialization:</p><ol><li>The list is empty</li><li>The slice spans the entire list</li><li>The slice begins at index zero and has length &lt;= <code>N</code> (where <code>N</code> is some sane-but-low-ish value)</li></ol><p>The first two were simple enough to implement but wouldn't impact my particular situation since those cases wouldn't have arisen in the test harness code. The third one, OTOH, would potentially yield some gains (at least for the first batch in the test set). Much like the single-type specialization pass it required explicitly specializing the slicer template many times, once for each 'prefix' length up to some value <code>N</code>:</p><pre class="m-code"><span class="k">enum</span> <span class="k">class</span> <span class="nc">type_list_slicer_spec</span> <span class="o">:</span> <span class="k">int</span>
+<span class="p">{</span>
+    <span class="n">arbitrary</span><span class="p">,</span>
+    <span class="n">prefix</span> <span class="c1">// new</span>
+<span class="p">};</span>
+
+<span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="nc">T0</span><span class="p">,</span> <span class="k">typename</span> <span class="nc">T1</span><span class="p">,</span> <span class="k">typename</span><span class="p">...</span> <span class="ut">T</span><span class="o">&gt;</span>
+<span class="k">struct</span> <span class="nc">type_list_slicer</span><span class="o">&lt;</span><span class="ut">type_list</span><span class="o">&lt;</span><span class="ut">T0</span><span class="p">,</span> <span class="ut">T1</span><span class="p">,</span> <span class="ut">T</span><span class="p">...</span><span class="o">&gt;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="ut">type_list_slicer_spec</span><span class="o">::</span><span class="ne">prefix</span><span class="o">&gt;</span>
+<span class="p">{</span>
+    <span class="k">using</span> <span class="ut">type</span> <span class="o">=</span> <span class="ut">type_list</span><span class="o">&lt;</span><span class="ut">T0</span><span class="p">,</span> <span class="ut">T1</span><span class="o">&gt;</span><span class="p">;</span>
+<span class="p">};</span>
+
+<span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="nc">T0</span><span class="p">,</span> <span class="k">typename</span> <span class="nc">T1</span><span class="p">,</span> <span class="k">typename</span> <span class="nc">T2</span><span class="p">,</span> <span class="k">typename</span><span class="p">...</span> <span class="ut">T</span><span class="o">&gt;</span>
+<span class="k">struct</span> <span class="nc">type_list_slicer</span><span class="o">&lt;</span><span class="ut">type_list</span><span class="o">&lt;</span><span class="ut">T0</span><span class="p">,</span> <span class="ut">T1</span><span class="p">,</span> <span class="ut">T2</span><span class="p">,</span> <span class="ut">T</span><span class="p">...</span><span class="o">&gt;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="ut">type_list_slicer_spec</span><span class="o">::</span><span class="ne">prefix</span><span class="o">&gt;</span>
+<span class="p">{</span>
+    <span class="k">using</span> <span class="ut">type</span> <span class="o">=</span> <span class="ut">type_list</span><span class="o">&lt;</span><span class="ut">T0</span><span class="p">,</span> <span class="ut">T1</span><span class="p">,</span> <span class="ut">T2</span><span class="o">&gt;</span><span class="p">;</span>
+<span class="p">};</span>
+
+<span class="c1">// ... and so on.</span></pre><p>Again, I chose 64 for <code>N</code>. Again, the results were a disappointment:</p><table class="m-table"><thead><tr><th></th><th>Clang 12</th><th>GCC 10</th><th>MSVC 19.29</th></tr></thead><tbody><tr><td>baseline</td><td>8.568s</td><td>7.439s</td><td>11.320s</td></tr><tr><td>eliminating <a class="m-doc-external poxy-external" href="http://en.cppreference.com/w/cpp/utility/tuple.html" target="_blank">std::<wbr/>tuple</a> instantiations</td><td>6.949s</td><td>3.608s</td><td>8.421s</td></tr><tr><td>eliminating <a class="m-doc-external poxy-external" href="http://en.cppreference.com/w/cpp/utility/tuple.html" target="_blank">std::<wbr/>tuple</a></td><td>6.664s</td><td>3.418s</td><td>9.802s</td></tr><tr><td>specializing single-type selection &lt; 64</td><td>7.544s</td><td>9.261s</td><td>CRASH</td></tr><tr><td><strong>specializing slice prefix selection &lt; 64</strong></td><td><strong>7.985s</strong></td><td><strong>9.524s</strong></td><td><strong>CRASH</strong></td></tr></tbody></table><p>Fundamentally I still had the same problem: I'm optimizing for the first 64 cases, and anything after that requires massive work for the compiler. Given that the type list I was concerned with at the time had around 400 types in it, I needed a way to spread these optimizations over the full <code>type_list</code> regardless of how long it was.</p><p class="m-note m-info"> Brief aside: If you're reading this and thinking "boy there sure is a lot of tedious and error-prone
+template specialization going on here", you can relax. It was done using some macros. I'm not a monster. Or I am a monster, depending on how you feel about macros.</p></section><section id="autotoc_md10"><h2><a href="#autotoc_md10">Pass 5: Pagination</a></h2><p>So far all the optimizations I'd implemented only applied to the first 64 types. If I wanted them to apply to types further down the list I'd need to implement some way of efficiently 'skipping' down the list until the first type I was concerned with was type 0. This required a set of specializations that could skip the first 63 types without requiring recursion, as well as an additional 'paginating' specialization that would skip ahead to each 64th type:</p><pre class="m-code"><span class="k">enum</span> <span class="k">class</span> <span class="nc">type_list_slicer_spec</span> <span class="o">:</span> <span class="k">int</span>
+<span class="p">{</span>
+    <span class="n">arbitrary</span><span class="p">,</span>
+    <span class="n">prefix</span><span class="p">,</span>
+    <span class="n">skip_first_N</span><span class="p">,</span> <span class="c1">// new</span>
+    <span class="n">skip_page</span>     <span class="c1">// new</span>
+<span class="p">};</span>
+
+<span class="c1">// skip the first element</span>
+<span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="nc">T0</span><span class="p">,</span> <span class="k">typename</span> <span class="nc">T1</span><span class="p">,</span> <span class="k">typename</span><span class="p">...</span> <span class="ut">T</span><span class="p">,</span> <span class="ut"><a class="m-doc poxy-injected poxy-external" href="https://en.cppreference.com/w/cpp/types/size_t" target="_blank">size_t</a></span> <span class="n">Length</span><span class="o">&gt;</span>
+<span class="k">struct</span> <span class="nc">type_list_slicer</span><span class="o">&lt;</span><span class="ut">type_list</span><span class="o">&lt;</span><span class="ut">T0</span><span class="p">,</span> <span class="ut">T1</span><span class="p">,</span> <span class="ut">T</span><span class="p">...</span><span class="o">&gt;</span><span class="p">,</span>
+                         <span class="mi">1</span><span class="p">,</span>
+                         <span class="n">Length</span><span class="p">,</span>
+                         <span class="ut">type_list_slicer_spec</span><span class="o">::</span><span class="ne">skip_first_N</span><span class="o">&gt;</span>
+<span class="p">{</span>
+    <span class="k">using</span> <span class="ut">type</span> <span class="o">=</span> <span class="k">typename</span> <span class="nc">type_list_slicer</span><span class="o">&lt;</span><span class="ut">type_list</span><span class="o">&lt;</span><span class="ut">T1</span><span class="p">,</span> <span class="ut">T</span><span class="p">...</span><span class="o">&gt;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">Length</span><span class="o">&gt;::</span><span class="n">type</span><span class="p">;</span>
+<span class="p">};</span>
+
+<span class="c1">// skip the first 2 elements</span>
+<span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="nc">T0</span><span class="p">,</span> <span class="k">typename</span> <span class="nc">T1</span><span class="p">,</span> <span class="k">typename</span> <span class="nc">T2</span><span class="p">,</span> <span class="k">typename</span><span class="p">...</span> <span class="ut">T</span><span class="p">,</span> <span class="ut"><a class="m-doc poxy-injected poxy-external" href="https://en.cppreference.com/w/cpp/types/size_t" target="_blank">size_t</a></span> <span class="n">Length</span><span class="o">&gt;</span>
+<span class="k">struct</span> <span class="nc">type_list_slicer</span><span class="o">&lt;</span><span class="ut">type_list</span><span class="o">&lt;</span><span class="ut">T0</span><span class="p">,</span> <span class="ut">T1</span><span class="p">,</span> <span class="ut">T2</span><span class="p">,</span> <span class="ut">T</span><span class="p">...</span><span class="o">&gt;</span><span class="p">,</span>
+                         <span class="mi">2</span><span class="p">,</span>
+                         <span class="n">Length</span><span class="p">,</span>
+                         <span class="ut">type_list_slicer_spec</span><span class="o">::</span><span class="ne">skip_first_N</span><span class="o">&gt;</span>
+<span class="p">{</span>
+    <span class="k">using</span> <span class="ut">type</span> <span class="o">=</span> <span class="k">typename</span> <span class="nc">type_list_slicer</span><span class="o">&lt;</span><span class="ut">type_list</span><span class="o">&lt;</span><span class="ut">T2</span><span class="p">,</span> <span class="ut">T</span><span class="p">...</span><span class="o">&gt;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">Length</span><span class="o">&gt;::</span><span class="n">type</span><span class="p">;</span>
+<span class="p">};</span>
+
+<span class="c1">// ... and so on.</span>
+
+<span class="c1">// skip a whole page</span>
+<span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="nc">List</span><span class="p">,</span> <span class="ut"><a class="m-doc poxy-injected poxy-external" href="https://en.cppreference.com/w/cpp/types/size_t" target="_blank">size_t</a></span> <span class="n">Start</span><span class="p">,</span> <span class="ut"><a class="m-doc poxy-injected poxy-external" href="https://en.cppreference.com/w/cpp/types/size_t" target="_blank">size_t</a></span> <span class="n">Length</span><span class="o">&gt;</span>
+<span class="k">struct</span> <span class="nc">type_list_slicer</span><span class="o">&lt;</span><span class="n">List</span><span class="p">,</span> <span class="n">Start</span><span class="p">,</span> <span class="n">Length</span><span class="p">,</span> <span class="ut">type_list_slicer_spec</span><span class="o">::</span><span class="ne">skip_page</span><span class="o">&gt;</span>
+<span class="p">{</span>
+    <span class="k">using</span> <span class="ut">type</span> <span class="o">=</span> <span class="k">typename</span> <span class="nc">type_list_slicer</span><span class="o">&lt;</span><span class="k">typename</span> <span class="nc">List</span><span class="o">::</span><span class="k">template</span> <span class="n">slice</span><span class="o">&lt;</span><span class="mi">63</span><span class="o">&gt;</span><span class="p">,</span>
+                                            <span class="n">Start</span> <span class="o">-</span> <span class="mi">63</span><span class="p">,</span>
+                                            <span class="n">Length</span><span class="o">&gt;::</span><span class="n">type</span><span class="p">;</span>
+<span class="p">};</span></pre><p>Alright, fingers-crossed:</p><table class="m-table"><thead><tr><th></th><th>Clang 12</th><th>GCC 10</th><th>MSVC 19.29</th></tr></thead><tbody><tr><td>baseline</td><td>8.568s</td><td>7.439s</td><td>11.320s</td></tr><tr><td>eliminating <a class="m-doc-external poxy-external" href="http://en.cppreference.com/w/cpp/utility/tuple.html" target="_blank">std::<wbr/>tuple</a> instantiations</td><td>6.949s</td><td>3.608s</td><td>8.421s</td></tr><tr><td>eliminating <a class="m-doc-external poxy-external" href="http://en.cppreference.com/w/cpp/utility/tuple.html" target="_blank">std::<wbr/>tuple</a></td><td>6.664s</td><td>3.418s</td><td>9.802s</td></tr><tr><td>specializing single-type selection &lt; 64</td><td>7.544s</td><td>9.261s</td><td>CRASH</td></tr><tr><td>specializing slice prefix selection &lt; 64</td><td>7.985s</td><td>9.524s</td><td>CRASH</td></tr><tr><td><strong>Pagination</strong></td><td><strong>0.777s</strong></td><td><strong>1.026s</strong></td><td><strong>2.014s</strong></td></tr></tbody></table><img alt="Image" class="m-image" src="so_good.jpg"/><p>There it was. The money shot. Cumulatively:</p><ul><li>Clang: 11x faster.</li><li>GCC: 7.2x faster.</li><li>MSVC: Not crashing lmao (oh but also 5.6x faster)</li></ul><p>And one final look at the time-trace graph:</p><img alt="Image" class="m-image" src="tuple_flamegraph_4.jpg"/><p>The all-encompassing rainbow instantiation wall had been replaced by that tiny bit in red. Wonderful.</p></section><section id="autotoc_md11"><h2><a href="#autotoc_md11">Conclusion</a></h2><p>The venerable <a class="m-doc-external poxy-external" href="http://en.cppreference.com/w/cpp/utility/tuple.html" target="_blank">std::<wbr/>tuple</a> is a decent vehicle for packing/unpacking small lists of types, but it's far too easy to accidentally trigger a costly instantiation explosion. If you don't need the runtime semantics a more performant solution is to use a bespoke 'type list'.</p><p class="m-note m-success"> If you don't want to roll your own, do I have good news for you! I've made my own <code>type_list</code> available on github: <a class="poxy-external" href="https://github.com/marzer/type_list" target="_blank">marzer/type_<wbr/>list</a></p></section>
+      </div>
+    </div>
+  </div>
+</article></main>
+<div class="m-doc-search" id="search">
+  <a href="#!" onclick="return hideSearch()"></a>
+  <div class="m-container">
+    <div class="m-row">
+      <div class="m-col-m-8 m-push-m-2">
+        <div class="m-doc-search-header m-text m-small">
+          <div><span class="m-label m-default">Tab</span> / <span class="m-label m-default">T</span> to search, <span class="m-label m-default">Esc</span> to close</div>
+          <div id="search-symbolcount">…</div>
+        </div>
+        <div class="m-doc-search-content">
+          <form>
+            <input autocomplete="off" autofocus="autofocus" disabled="disabled" id="search-input" name="q" placeholder="Loading …" spellcheck="false" type="search"/>
+          </form>
+          <noscript class="m-text m-danger m-text-center">Unlike everything else in the docs, the search functionality <em>requires</em> JavaScript.</noscript>
+          <div class="m-text m-dim m-text-center" id="search-help">
+            <p class="m-noindent">Search for symbols, directories, files, pages or
+            modules. You can omit any prefix from the symbol or file path; adding a
+            <code>:</code> or <code>/</code> suffix lists all members of given symbol or
+            directory.</p>
+            <p class="m-noindent">Use <span class="m-label m-dim">↓</span>
+            / <span class="m-label m-dim">↑</span> to navigate through the list,
+            <span class="m-label m-dim">Enter</span> to go.
+            <span class="m-label m-dim">Tab</span> autocompletes common prefix, you can
+            copy a link to the result using <span class="m-label m-dim">⌘</span>
+            <span class="m-label m-dim">L</span> while <span class="m-label m-dim">⌘</span>
+            <span class="m-label m-dim">M</span> produces a Markdown link.</p>
+          </div>
+          <div class="m-text m-warning m-text-center" id="search-notfound">Sorry, nothing was found.</div>
+          <ul id="search-results"></ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="search-v1.js"></script>
+<script async="async" src="searchdata-v1.js"></script>
+<footer><nav>
+  <div class="m-container">
+    <div class="m-row">
+      <div class="m-col-l-10 m-push-l-1">
+        
+    Site generated using <a class="poxy-external" href="https://github.com/marzer/poxy/" target="_blank">Poxy</a>
+
+      </div>
+    </div>
+  </div>
+</nav></footer>
+
+
+</body></html>

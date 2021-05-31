@@ -43,7 +43,7 @@ a
 
 article div > section
 {
-	margin-top: 3rem;
+	margin-top: 4rem;
 }
 
 article div > section > section
@@ -222,11 +222,10 @@ pre > p.godbolt
 figure.m-figure > figcaption
 {
 	font-weight: initial !important;
-	font-size: initial !important;
+	font-size: 1rem !important;
 	text-align: center;
 	margin-top: initial;
 }
-
 figure.m-figure::before
 {
 	border-style: none !important;
@@ -239,19 +238,6 @@ figure.m-figure::before
 .m-note > h4
 {
 	font-size: 1em;
-}
-
-/* lists inside blocks and notes */
-.m-block li,
-.m-note li
-{
-	margin-bottom: 0.2rem;
-}
-
-.m-block li:last-child,
-.m-note li:last-child
-{
-	margin-bottom: initial;
 }
 
 /* m-special (purple) */
@@ -337,6 +323,24 @@ h6:last-child
 .m-doc-details table img.m-image
 {
 	margin-left: inherit;
+}
+
+/* table of contents */
+@media screen and (min-width: 1350px) and (min-height: 900px)
+{
+	.poxy-toc
+	{
+		position: fixed;
+		top: 9rem;
+		left: calc(50% + 430px);
+		min-width: 200px;
+		z-index: 5;
+		margin: 0px 20px 0px 0px !important;
+	}
+	div.poxy-toc + section
+	{
+		margin-top: 2rem;
+	}
 }
 
 /* ====================================================
