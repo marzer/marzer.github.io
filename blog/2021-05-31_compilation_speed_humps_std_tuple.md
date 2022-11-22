@@ -9,28 +9,33 @@ clang's [`-ftime-trace`] I was able to find the root cause: std::tuple.
 This post is a recap of what I found and how I fixed it.
 
 ## Background
+
 The project in question has a number of linear algebra types that required testing with all fundamental arithmetic types,
 and for different extents (e.g. `vector<float, 2>`, `vector<float, 3>`, `vector<double, 2>`, etc.). Wanting to
 parameterize this somehow, but also being fairly new to unit testing when I put the project's tests together, I came up
 with the homebrew solution of sticking the tests in a header which would be included in multiple
 translation units with different `#defines` for specifying the template type, e.g.:
+
 ```cpp
 // test_vec2_float.cpp
 #define SCALAR_TYPE float
 #define DIMENSIONS  2
 #include "vector_tests.h"
 ```
+
 Very tedious to maintain, but the codebase was small, so I didn't really dig any deeper. Once the project grew, however,
 this method became a huge PITA. If you've written unit tests in C++ you can likely see where this is going.
 
 C++ unit test frameworks invariably have a means of parameterizing a test case by type so you can test a class or
 function template for many types and only need to write the test code once. In [Catch2], which is the framework I use,
 there's two primary facilities for doing this:
-- [TEMPLATE_TEST_CASE] - requires you to explicitly list the type arguments
-- [TEMPLATE_LIST_TEST_CASE] - extracts the types from some variadic type list (e.g. std::tuple)
+
+-   [TEMPLATE_TEST_CASE] - requires you to explicitly list the type arguments
+-   [TEMPLATE_LIST_TEST_CASE] - extracts the types from some variadic type list (e.g. std::tuple)
 
 When seeking to refactor my terrible homebrew solution into something more maintainable
 I chose [TEMPLATE_LIST_TEST_CASE] combined with std::tuple and some macros for listing arithmetic types, e.g:
+
 ```cpp
 #define SCALAR_TYPES short, int, long, long long, float, double // ... etc
 
@@ -47,6 +52,7 @@ TEMPLATE_LIST_TEST_CASE("some tests", "", all_matrix_types<SCALAR_TYPES>)
 	// ...
 }
 ```
+
 While being a lot cleaner (all being in one TU), this had the problem of being an absolute _dog_ to compile, even on my
 Ryzen 3950X. And of course! There's no way for a build system to parallellize this because it's all just one translation
 unit. (Not to mention GCC required so much RAM to build it that it would go OOM and crash.) While being a mess to maintain,
@@ -69,11 +75,11 @@ protect the innocent.
 With that established, here's how long the 'vanilla' code took to compile:
 
 |          | Clang 12 | GCC 10 | MSVC 19.29 |
-|----------|----------|--------|------------|
+| -------- | -------- | ------ | ---------- |
 | baseline | 8.568s   | 7.439s | 11.320s    |
 
-
 ## Finding the root cause with Clang's -ftime-trace
+
 First step was to determine where the compilers were spending most of their time. One way of doing that is to use Clang's
 [`-ftime-trace`] flag, introduced in LLVM 9.0. Specifying [`-ftime-trace`] causes Clang to spit out compilation timing
 data as JSON files next to .obj files they correspond to. These files can then be fed into chrome's `chrome://tracing`
@@ -130,9 +136,9 @@ template <typename Tuple, size_t Start, size_t Length>
 using tuple_slice = typename tuple_slicer<Tuple, Start, std::make_index_sequence<Length>>::type;
 ```
 
-|                                           | Clang 12   |  GCC 10    | MSVC 19.29 |
-|-------------------------------------------|------------|------------|------------|
-| baseline                                  | 8.568s     |  7.439s    | 11.320s    |
+|                                           | Clang 12   | GCC 10     | MSVC 19.29 |
+| ----------------------------------------- | ---------- | ---------- | ---------- |
+| baseline                                  | 8.568s     | 7.439s     | 11.320s    |
 | **eliminating std::tuple instantiations** | **6.949s** | **3.608s** | **8.421s** |
 
 GCC seemed pretty happy with just that, but even 3.6 seconds for one TU was not going to cut it. I needed to go deeper.
@@ -149,9 +155,10 @@ above, largely thanks to `std::tuple_element`.
 
 Good thing I didn't need any of std::tuple's runtime semantics. Any variadic template type would do, as long as I could
 easily extract:
-- the number of types in the list
-- a type at a specific index
-- a slice of the types (start + length)
+
+-   the number of types in the list
+-   a type at a specific index
+-   a slice of the types (start + length)
 
 Enter the `type_list`:
 
@@ -230,11 +237,10 @@ struct type_list
 After replacing the tuples with `type_list`:
 
 |                                       | Clang 12   | GCC 10     | MSVC 19.29 |
-|---------------------------------------|------------|------------|------------|
+| ------------------------------------- | ---------- | ---------- | ---------- |
 | baseline                              | 8.568s     | 7.439s     | 11.320s    |
-| eliminating std::tuple instantiations | 6.949s     | 3.608s     |  8.421s    |
+| eliminating std::tuple instantiations | 6.949s     | 3.608s     | 8.421s     |
 | **eliminating std::tuple**            | **6.664s** | **3.418s** | **9.802s** |
-
 
 Hmmmm. Womp-womp. Let's take a look at the trace graph:
 
@@ -274,10 +280,10 @@ struct type_list_selector<type_list<T0, T1, T...>, 1, type_list_selector_spec::l
 Assuming a good value for N this should eliminate a good chunk of the recursion required. I chose 64. Let's see:
 
 |                                        | Clang 12   | GCC 10     | MSVC 19.29 |
-|----------------------------------------|------------|------------|------------|
+| -------------------------------------- | ---------- | ---------- | ---------- |
 | baseline                               | 8.568s     | 7.439s     | 11.320s    |
-| eliminating std::tuple instantiations  | 6.949s     | 3.608s     |  8.421s    |
-| eliminating std::tuple                 | 6.664s     | 3.418s     |  9.802s    |
+| eliminating std::tuple instantiations  | 6.949s     | 3.608s     | 8.421s     |
+| eliminating std::tuple                 | 6.664s     | 3.418s     | 9.802s     |
 | **specializing single-type selection** | **7.544s** | **9.261s** | **CRASH**  |
 
 ...
@@ -294,6 +300,7 @@ moved on to optimizing the sublist 'slicer'.
 ## Pass 4: Specializing slice prefix selection
 
 There's a few cases of low-hanging fruit when talking slice specialization:
+
 1. The list is empty
 2. The slice spans the entire list
 3. The slice begins at index zero and has length <= `N` (where `N` is some sane-but-low-ish value)
@@ -328,10 +335,10 @@ struct type_list_slicer<type_list<T0, T1, T2, T...>, 0, 3, type_list_slicer_spec
 Again, I chose 64 for `N`. Again, the results were a disappointment:
 
 |                                         | Clang 12   | GCC 10     | MSVC 19.29 |
-|-----------------------------------------|------------|------------|------------|
+| --------------------------------------- | ---------- | ---------- | ---------- |
 | baseline                                | 8.568s     | 7.439s     | 11.320s    |
-| eliminating std::tuple instantiations   | 6.949s     | 3.608s     |  8.421s    |
-| eliminating std::tuple                  | 6.664s     | 3.418s     |  9.802s    |
+| eliminating std::tuple instantiations   | 6.949s     | 3.608s     | 8.421s     |
+| eliminating std::tuple                  | 6.664s     | 3.418s     | 9.802s     |
 | specializing single-type selection      | 7.544s     | 9.261s     | CRASH      |
 | **specializing slice prefix selection** | **7.985s** | **9.524s** | **CRASH**  |
 
@@ -343,11 +350,13 @@ template specialization going on here", you can relax. It was done using some ma
 monster, depending on how you feel about macros.
 
 ## Pass 5: Pagination
-So far all the optimizations I'd implemented only applied to the first 64 types.  Given that the type list I was
+
+So far all the optimizations I'd implemented only applied to the first 64 types. Given that the type list I was
 concerned with at the time had around 400 types in it, I needed a way to spread these optimizations over the
 full `type_list` regardless of how long it was.
 
 The way I chose to tackle this required two different bits of logic:
+
 1. If the start of the desired slice is greater than some threshold `N`, skip ahead in `N`-sized 'pages'
 2. Otherwise skip ahead to the sub-list beginning at `N`
 
@@ -399,10 +408,10 @@ struct type_list_slicer<List, Start, Length, type_list_slicer_spec::skip_page>
 Alright, fingers-crossed:
 
 |                                       | Clang 12   | GCC 10     | MSVC 19.29 |
-|---------------------------------------|------------|------------|------------|
+| ------------------------------------- | ---------- | ---------- | ---------- |
 | baseline                              | 8.568s     | 7.439s     | 11.320s    |
-| eliminating std::tuple instantiations | 6.949s     | 3.608s     |  8.421s    |
-| eliminating std::tuple                | 6.664s     | 3.418s     |  9.802s    |
+| eliminating std::tuple instantiations | 6.949s     | 3.608s     | 8.421s     |
+| eliminating std::tuple                | 6.664s     | 3.418s     | 9.802s     |
 | specializing single-type selection    | 7.544s     | 9.261s     | CRASH      |
 | specializing slice prefix selection   | 7.985s     | 9.524s     | CRASH      |
 | **pagination**                        | **0.777s** | **1.026s** | **2.014s** |
@@ -410,9 +419,10 @@ Alright, fingers-crossed:
 \figure{so_good.jpg}
 
 There it was. The money shot. Cumulatively:
-- Clang: 11x faster.
-- GCC: 7.2x faster.
-- MSVC: Not crashing lmao (oh but also 5.6x faster)
+
+-   Clang: 11x faster.
+-   GCC: 7.2x faster.
+-   MSVC: Not crashing lmao (oh but also 5.6x faster)
 
 And one final look at the time-trace graph:
 
@@ -425,9 +435,11 @@ server that brought me here to begin with?
 
 Much more wallet-friendly.
 
-## Bonus Round: Clang's __type_pack_element
+## Bonus Round: Clang's \_\_type_pack_element
+
 Jonathan Müller (foonathan) [pointed out] that Clang comes equipped with a builtin for quickly selecting single elements
 from variadic type pack by index: `__type_pack_element`. Using it I was able to special-case this machinery for clang:
+
 ```cpp
 
 #ifdef __has_builtin
@@ -454,15 +466,15 @@ struct type_list_selector<type_list<T...>, N>
 
 Did it make a difference?
 
-|                                       | Clang 12   | GCC 10     | MSVC 19.29 |
-|---------------------------------------|------------|------------|------------|
-| baseline                              | 8.568s     | 7.439s     | 11.320s    |
-| eliminating std::tuple instantiations | 6.949s     | 3.608s     |  8.421s    |
-| eliminating std::tuple                | 6.664s     | 3.418s     |  9.802s    |
-| specializing single-type selection    | 7.544s     | 9.261s     | CRASH      |
-| specializing slice prefix selection   | 7.985s     | 9.524s     | CRASH      |
-| pagination                            | 0.777s     | 1.026s     | 2.014s     |
-| **clang's `__type_pack_element`**     | **0.661s** | 1.026s     | 2.014s     |
+|                                       | Clang 12   | GCC 10 | MSVC 19.29 |
+| ------------------------------------- | ---------- | ------ | ---------- |
+| baseline                              | 8.568s     | 7.439s | 11.320s    |
+| eliminating std::tuple instantiations | 6.949s     | 3.608s | 8.421s     |
+| eliminating std::tuple                | 6.664s     | 3.418s | 9.802s     |
+| specializing single-type selection    | 7.544s     | 9.261s | CRASH      |
+| specializing slice prefix selection   | 7.985s     | 9.524s | CRASH      |
+| pagination                            | 0.777s     | 1.026s | 2.014s     |
+| **clang's `__type_pack_element`**     | **0.661s** | 1.026s | 2.014s     |
 
 Nice. Shaving off 116ms brought Clang to a 13x cumulative speedup. The time-trace graph showed that the difference
 came almost entirely from the `Source: type_list.h` node, which makes sense; using this method exclusively for the
@@ -470,62 +482,58 @@ single-element selectors, as opposed to all the specialization machinery above, 
 non-builtin stuff out and save the compiler from even having to parse it.
 
 ## Bonus Round: Different values for N
+
 I realized after first posting this article that I chose `N == 64` somewhat arbitrarily and stuck to it, but since I used
 macros to do the guts of the implementation it should be fairly easy to explore the impacts of different values without
 much extra work:
 
-|                                            | Clang 12   | GCC 10     | MSVC 19.29 |
-|--------------------------------------------|------------|------------|------------|
-| `N == 8`                                   | 0.678s     | 0.892s     | 1.358s     |
-| `N == 16`                                  | 0.648s     | **0.880s** | **1.356s** |
-| `N == 32`                                  | **0.628s** | 0.916s     | 1.595s     |
-| `N == 48`                                  | 0.659s     | 0.942s     | 1.780s     |
-| `N == 64`                                  | 0.661s     | 1.026s     | 2.014s     |
+|           | Clang 12   | GCC 10     | MSVC 19.29 |
+| --------- | ---------- | ---------- | ---------- |
+| `N == 8`  | 0.678s     | 0.892s     | 1.358s     |
+| `N == 16` | 0.648s     | **0.880s** | **1.356s** |
+| `N == 32` | **0.628s** | 0.916s     | 1.595s     |
+| `N == 48` | 0.659s     | 0.942s     | 1.780s     |
+| `N == 64` | 0.661s     | 1.026s     | 2.014s     |
 
 Well. This _is_ interesting! Not only did my initial choice of 64 turn out to be quite poor, but:
-- Clang seems happiest when `N == 32`
-- GCC and MSVC seem to both prefer `N == 16`
+
+-   Clang seems happiest when `N == 32`
+-   GCC and MSVC seem to both prefer `N == 16`
 
 Using these findings to apply compiler-specific values for `N`:
 
-|                                        | Clang 12   | GCC 10     | MSVC 19.29 |
-|----------------------------------------|------------|------------|------------|
-| baseline                               | 8.568s     | 7.439s     | 11.320s    |
-| eliminating std::tuple instantiations  | 6.949s     | 3.608s     |  8.421s    |
-| eliminating std::tuple                 | 6.664s     | 3.418s     |  9.802s    |
-| specializing single-type selection     | 7.544s     | 9.261s     | CRASH      |
-| specializing slice prefix selection    | 7.985s     | 9.524s     | CRASH      |
-| pagination                             | 0.777s     | 1.026s     | 2.014s     |
-| clang's `__type_pack_element`          | 0.661s     | 1.026s     | 2.014s     |
-| **tuning `N` for specific compilers**  | **0.628s** | **0.880s** | **1.356s** |
-
+|                                       | Clang 12   | GCC 10     | MSVC 19.29 |
+| ------------------------------------- | ---------- | ---------- | ---------- |
+| baseline                              | 8.568s     | 7.439s     | 11.320s    |
+| eliminating std::tuple instantiations | 6.949s     | 3.608s     | 8.421s     |
+| eliminating std::tuple                | 6.664s     | 3.418s     | 9.802s     |
+| specializing single-type selection    | 7.544s     | 9.261s     | CRASH      |
+| specializing slice prefix selection   | 7.985s     | 9.524s     | CRASH      |
+| pagination                            | 0.777s     | 1.026s     | 2.014s     |
+| clang's `__type_pack_element`         | 0.661s     | 1.026s     | 2.014s     |
+| **tuning `N` for specific compilers** | **0.628s** | **0.880s** | **1.356s** |
 
 ## Conclusion
 
-The venerable std::tuple is a decent vehicle for packing/unpacking small lists of types, but it's far too easy to 
+The venerable std::tuple is a decent vehicle for packing/unpacking small lists of types, but it's far too easy to
 accidentally trigger a costly instantiation explosion. If you don't need the runtime semantics a more performant
 solution is to use a bespoke 'type list'.
 
 \inline_success If you don't want to roll your own, do I have good news for you!
-I've made mine available on github: [marzer/type_list]
-
+I've made mine available on github: <a href="https://github.com/marzer/type_list">\[strong\]marzer/type_list\[/strong\]</a>
 
 ## Corrections, contact
 
 In order of likely response speed:
-- The [r/cpp post] for this article (likely how you got here)
-- Twitter: [marzer8789](https://twitter.com/marzer8789)
-- Email: [mark.gillard@outlook.com.au](mailto:mark.gillard@outlook.com.au)
 
+-   The [r/cpp post] for this article (likely how you got here)
+-   Twitter: [marzer8789](https://twitter.com/marzer8789)
+-   Email: [mark.gillard@outlook.com.au](mailto:mark.gillard@outlook.com.au)
 
-
-
-
-
-[ClangBuildAnalyzer]: https://github.com/aras-p/ClangBuildAnalyzer
-[Catch2]: https://github.com/catchorg/Catch2
-[TEMPLATE_TEST_CASE]: https://github.com/catchorg/Catch2/blob/devel/docs/test-cases-and-sections.md#type-parametrised-test-cases
-[TEMPLATE_LIST_TEST_CASE]: https://github.com/catchorg/Catch2/blob/devel/docs/test-cases-and-sections.md#type-parametrised-test-cases
+[clangbuildanalyzer]: https://github.com/aras-p/ClangBuildAnalyzer
+[catch2]: https://github.com/catchorg/Catch2
+[template_test_case]: https://github.com/catchorg/Catch2/blob/devel/docs/test-cases-and-sections.md#type-parametrised-test-cases
+[template_list_test_case]: https://github.com/catchorg/Catch2/blob/devel/docs/test-cases-and-sections.md#type-parametrised-test-cases
 [`-ftime-trace`]: https://github.com/aras-p/llvm-project-20170507/pull/2
 [speedscope]: https://www.speedscope.app/
 [marzer/type_list]: https://github.com/marzer/type_list
