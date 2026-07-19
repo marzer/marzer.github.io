@@ -277,6 +277,16 @@ a {
     opacity: 0.1;
 }
 
+.pre-band {
+    fill: var(--muted);
+    opacity: 0.07;
+}
+
+.start-line {
+    stroke: var(--muted);
+    stroke-width: 1;
+}
+
 .bar {
     fill: var(--accent);
 }
