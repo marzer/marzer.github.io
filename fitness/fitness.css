@@ -322,7 +322,8 @@ td.num {
     font-variant-numeric: tabular-nums;
 }
 
-.cell-note {
+.cell-note,
+.legend {
     color: var(--muted);
     font-size: 0.8rem;
 }
