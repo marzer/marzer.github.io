@@ -28,6 +28,7 @@
 *.ico               binary
 *.jpeg              binary
 *.jpg               binary
+*.JPG               binary
 *.otf               binary
 *.png               binary
 *.psd               binary

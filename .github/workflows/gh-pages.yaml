@@ -10,6 +10,8 @@ on:
             - "**.dox"
             - "**.md"
             - "docs/**"
+            - "poxy.toml"
+            - ".github/workflows/gh-pages.yaml"
     workflow_dispatch:
 
 jobs:
@@ -21,12 +23,12 @@ jobs:
                 shell: bash
 
         steps:
-            - uses: actions/checkout@v3
+            - uses: actions/checkout@v7
 
             - name: Install dependencies
               run: |
                   sudo apt -y update
-                  sudo apt -y install --no-install-recommends git python3 python3-pip doxygen
+                  sudo apt -y install --no-install-recommends git python3 python3-pip doxygen dvisvgm
                   sudo -H pip3 install --upgrade poxy
 
             - name: Generate docs
@@ -34,7 +36,7 @@ jobs:
                   poxy --verbose
 
             - name: Deploy
-              uses: peaceiris/actions-gh-pages@v3
+              uses: peaceiris/actions-gh-pages@v4
               with:
                   github_token: ${{ secrets.GITHUB_TOKEN }}
                   publish_dir: ./html

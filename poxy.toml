@@ -8,6 +8,7 @@ show_includes = false
 theme = 'light'
 github = 'marzer/marzer.github.io'
 navbar = 'all'
+main_page = true
 
 [warnings]
 treat_as_errors = true
