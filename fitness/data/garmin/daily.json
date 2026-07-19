@@ -1,0 +1,282 @@
+{
+ "days": [
+  {
+   "date": "2026-05-20",
+   "resting_hr": 78,
+   "steps": 631
+  },
+  {
+   "date": "2026-05-21",
+   "resting_hr": 79,
+   "steps": 1872
+  },
+  {
+   "date": "2026-05-22",
+   "resting_hr": 81,
+   "steps": 6861
+  },
+  {
+   "date": "2026-05-23",
+   "resting_hr": 71,
+   "steps": 1501
+  },
+  {
+   "date": "2026-05-24",
+   "resting_hr": 75,
+   "steps": 2273
+  },
+  {
+   "date": "2026-05-25",
+   "resting_hr": 66,
+   "steps": 1157
+  },
+  {
+   "date": "2026-05-26",
+   "resting_hr": 80,
+   "steps": 5856
+  },
+  {
+   "date": "2026-05-27",
+   "resting_hr": 79,
+   "steps": 4555
+  },
+  {
+   "date": "2026-05-28",
+   "resting_hr": 79,
+   "steps": 247
+  },
+  {
+   "date": "2026-05-30",
+   "resting_hr": 80,
+   "steps": 6558
+  },
+  {
+   "date": "2026-05-31",
+   "resting_hr": 87,
+   "steps": 9613
+  },
+  {
+   "date": "2026-06-01",
+   "resting_hr": 89,
+   "steps": 5077
+  },
+  {
+   "date": "2026-06-02",
+   "resting_hr": 75,
+   "steps": 4616
+  },
+  {
+   "date": "2026-06-03",
+   "resting_hr": 80,
+   "steps": 2262
+  },
+  {
+   "date": "2026-06-04",
+   "resting_hr": 86,
+   "steps": 4923
+  },
+  {
+   "date": "2026-06-05",
+   "resting_hr": 81,
+   "steps": 7941
+  },
+  {
+   "date": "2026-06-06",
+   "resting_hr": 76,
+   "steps": 6214
+  },
+  {
+   "date": "2026-06-07",
+   "resting_hr": 85,
+   "steps": 3347
+  },
+  {
+   "date": "2026-06-08",
+   "resting_hr": 66,
+   "steps": 5801
+  },
+  {
+   "date": "2026-06-09",
+   "resting_hr": 60,
+   "steps": 5249
+  },
+  {
+   "date": "2026-06-10",
+   "resting_hr": 80,
+   "steps": 5219
+  },
+  {
+   "date": "2026-06-12",
+   "resting_hr": 77,
+   "steps": 9467
+  },
+  {
+   "date": "2026-06-13",
+   "resting_hr": 67,
+   "steps": 7353
+  },
+  {
+   "date": "2026-06-14",
+   "resting_hr": 56,
+   "steps": 221
+  },
+  {
+   "date": "2026-06-15",
+   "resting_hr": 55,
+   "steps": 687
+  },
+  {
+   "date": "2026-06-16",
+   "resting_hr": 53,
+   "steps": 1052
+  },
+  {
+   "date": "2026-06-17",
+   "resting_hr": 53,
+   "steps": 7189
+  },
+  {
+   "date": "2026-06-18",
+   "resting_hr": 64,
+   "steps": 3688
+  },
+  {
+   "date": "2026-06-19",
+   "resting_hr": 62,
+   "steps": 1822
+  },
+  {
+   "date": "2026-06-21",
+   "resting_hr": 61,
+   "steps": 772
+  },
+  {
+   "date": "2026-06-22",
+   "resting_hr": 66,
+   "steps": 1915
+  },
+  {
+   "date": "2026-06-23",
+   "resting_hr": 61,
+   "steps": 34
+  },
+  {
+   "date": "2026-06-25",
+   "resting_hr": 77,
+   "steps": 2120
+  },
+  {
+   "date": "2026-06-26",
+   "resting_hr": 70,
+   "steps": 4778
+  },
+  {
+   "date": "2026-06-27",
+   "resting_hr": 74,
+   "steps": 4431
+  },
+  {
+   "date": "2026-06-28",
+   "resting_hr": 78,
+   "steps": 429
+  },
+  {
+   "date": "2026-06-29",
+   "steps": 5296
+  },
+  {
+   "date": "2026-06-30",
+   "resting_hr": 106,
+   "steps": 3898
+  },
+  {
+   "date": "2026-07-01",
+   "resting_hr": 58,
+   "steps": 125
+  },
+  {
+   "date": "2026-07-02",
+   "resting_hr": 95,
+   "steps": 8065
+  },
+  {
+   "date": "2026-07-04",
+   "resting_hr": 73,
+   "steps": 9
+  },
+  {
+   "date": "2026-07-05",
+   "resting_hr": 91,
+   "steps": 456
+  },
+  {
+   "date": "2026-07-06",
+   "resting_hr": 62,
+   "steps": 11813
+  },
+  {
+   "date": "2026-07-07",
+   "resting_hr": 86,
+   "steps": 7048
+  },
+  {
+   "date": "2026-07-08",
+   "resting_hr": 65,
+   "steps": 8461
+  },
+  {
+   "date": "2026-07-09",
+   "resting_hr": 81,
+   "steps": 3555
+  },
+  {
+   "date": "2026-07-10",
+   "resting_hr": 77,
+   "steps": 12308
+  },
+  {
+   "date": "2026-07-11",
+   "resting_hr": 67
+  },
+  {
+   "date": "2026-07-12",
+   "resting_hr": 78,
+   "steps": 2501
+  },
+  {
+   "date": "2026-07-13",
+   "resting_hr": 78,
+   "steps": 1959
+  },
+  {
+   "date": "2026-07-14",
+   "resting_hr": 79,
+   "steps": 7309
+  },
+  {
+   "date": "2026-07-15",
+   "resting_hr": 83,
+   "steps": 3597
+  },
+  {
+   "date": "2026-07-16",
+   "resting_hr": 66,
+   "steps": 9880
+  },
+  {
+   "date": "2026-07-17",
+   "resting_hr": 69,
+   "steps": 10658
+  },
+  {
+   "date": "2026-07-18",
+   "resting_hr": 66,
+   "steps": 10946
+  },
+  {
+   "date": "2026-07-19",
+   "resting_hr": 84,
+   "steps": 46
+  }
+ ]
+}

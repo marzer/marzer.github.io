@@ -10,6 +10,7 @@ on:
             - "**.dox"
             - "**.md"
             - "docs/**"
+            - "fitness/**"
             - "poxy.toml"
             - ".github/workflows/gh-pages.yaml"
     workflow_dispatch:
@@ -29,11 +30,15 @@ jobs:
               run: |
                   sudo apt -y update
                   sudo apt -y install --no-install-recommends git python3 python3-pip doxygen dvisvgm
-                  sudo -H pip3 install --upgrade poxy
+                  sudo -H pip3 install --upgrade poxy markdown
 
             - name: Generate docs
               run: |
                   poxy --verbose
+
+            - name: Generate fitness site
+              run: |
+                  python3 fitness/build.py
 
             - name: Deploy
               uses: peaceiris/actions-gh-pages@v4
