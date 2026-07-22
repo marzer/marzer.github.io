@@ -63,31 +63,16 @@ body {
     line-height: var(--line-height);
 }
 
-header {
-    background: var(--header-background-color);
-    border-bottom: 1px solid var(--border);
-}
-
+/* the full-width translucent bar, link colours/padding and 3rem height all come
+   from m.css (poxy.css) via `body > header > nav`, matching the parent exactly;
+   we add only the flex row that lays out our plain-anchor markup, and align the
+   injected theme <button> to the same metrics as the links. */
 nav {
-    max-width: 860px;
-    margin: 0 auto;
-    padding: 0.7rem 1rem;
     display: flex;
-    align-items: baseline;
-    gap: 1.2rem;
-}
-
-nav a {
-    color: var(--header-link-color);
-    text-decoration: none;
-}
-
-nav a:hover {
-    color: var(--header-link-active-color);
+    align-items: center;
 }
 
 nav .brand {
-    color: var(--header-link-color);
     text-transform: var(--nav-brand-case);
     font-weight: var(--heading-font-weight);
     margin-right: auto;
@@ -100,9 +85,9 @@ nav .brand strong {
 .theme-btn {
     background: none;
     border: none;
-    padding: 0;
+    padding: 0 1rem;
     font: inherit;
-    font-size: 0.85rem;
+    line-height: 2.75rem;
     color: var(--header-link-color);
     cursor: pointer;
 }
