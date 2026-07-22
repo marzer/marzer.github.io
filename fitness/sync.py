@@ -12,6 +12,9 @@ try:
 except ImportError:
     sys.exit("sync.py requires: pip install garminconnect curl_cffi")
 
+if sys.stdout.encoding.lower() not in ("utf-8", "utf8"):  # cp1252 windows consoles
+    sys.stdout.reconfigure(errors="replace")
+
 ROOT = Path(__file__).resolve().parent
 GARMIN_DIR = ROOT / "data" / "garmin"
 TOKENSTORE = "~/.garminconnect"

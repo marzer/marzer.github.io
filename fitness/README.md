@@ -1,8 +1,21 @@
 # fitness
 
 Source for [marzer.github.io/fitness](https://marzer.github.io/fitness/) — a
-static, JS-free fitness tracker. `build.py` renders everything in `data/` and
+static fitness tracker. `build.py` renders everything in `data/` and
 `notes/` to `html/fitness/`; CI runs it after poxy and deploys the lot.
+
+Everything renders server-side; a small dependency-free script (`fitness.js`)
+layers on chart tooltips, a theme toggle, and time-range toggles. With JS
+disabled the site still works in full — controls simply don't appear.
+
+Styling piggybacks on the parent site: every page `<link>`s the blog's
+`/poxy/poxy.css` ahead of `fitness.css`, so it inherits the same fonts and
+m.css theme variables for free. `fitness.css` maps those variables onto this
+layout and adds one small reset (m.css makes `<body>` a flex column for its
+sticky footer; here it flows normally). Light/dark is shared too — the toggle
+here and on the blog both flip the same `poxy-theme-*` class and
+`localStorage` key, so switching one switches both. This means the fitness
+pages depend on poxy having run; they aren't styled standalone.
 
 ## Layout
 
@@ -11,7 +24,7 @@ fitness/
 ├── build.py          renders the site (stdlib + `markdown`)
 ├── sync.py           pulls Garmin data into data/garmin/ (run locally only)
 ├── program.md        the training program, rendered at /fitness/program/
-├── static/           stylesheet
+├── static/           stylesheet + enhancement script
 ├── data/
 │   ├── config.toml   program start date + goal weight band
 │   ├── garmin/       machine-written JSON (sync.py); summary metrics only, never GPS
@@ -93,6 +106,7 @@ fitness/build.py              # fitness site → html/fitness/
 python3 -m http.server -d html
 ```
 
-Order matters: poxy wipes `html/`. `build.py` needs Python ≥ 3.11 and
-`pip install markdown`. A bad TOML entry or set string fails the build with a
-message naming the file — fix and push again.
+Order matters: poxy wipes `html/`, and the fitness pages load the `poxy.css`
+it emits (so styling only looks right once poxy has run). `build.py` needs
+Python ≥ 3.11 and `pip install markdown`. A bad TOML entry or set string fails
+the build with a message naming the file — fix and push again.

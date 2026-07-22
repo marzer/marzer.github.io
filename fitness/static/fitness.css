@@ -1,81 +1,99 @@
+/* the fitness pages <link> the parent site's /poxy/poxy.css first, so its fonts
+   and m.css theme variables are available here. these tokens name the subset
+   this layout uses; theme switching swaps .poxy-theme-light/dark on <html>,
+   exactly like the parent site, and every token re-resolves. */
 :root {
-    color-scheme: light dark;
-    --page: #f9f9f7;
-    --surface: #fcfcfb;
-    --ink: #0b0b0b;
-    --ink-2: #52514e;
-    --muted: #898781;
-    --grid: #e1e0d9;
-    --axis: #c3c2b7;
-    --border: rgba(11, 11, 11, 0.1);
-    --accent: #cb4b16;
-    --good: #0ca30c;
-    --good-text: #006300;
-    --bad-text: #d03b3b;
-    --k0: #0ca30c;
-    --k1: #fab219;
+    --page: var(--background-color);
+    --surface: var(--code-background-color);
+    --ink: var(--color);
+    --ink-2: var(--footer-color);
+    --muted: var(--dim-color);
+    --accent: var(--link-color);
+    --accent-2: var(--link-active-color);
+    --good: var(--success-color);
+    --good-text: var(--success-link-active-color);
+    --bad-text: var(--danger-link-active-color);
+    --k0: var(--success-color);
+    --k1: var(--warning-color);
+    --k3: var(--danger-color);
+    /* chart gridlines/borders; neutral defaults, tinted from the theme's line
+       colour where color-mix() is supported (below) */
+    --grid: rgba(128, 128, 128, 0.18);
+    --axis: rgba(128, 128, 128, 0.45);
+    --border: rgba(128, 128, 128, 0.22);
     --k2: #ec835a;
-    --k3: #d03b3b;
 }
 
-@media (prefers-color-scheme: dark) {
+@supports (color: color-mix(in srgb, red, blue)) {
     :root {
-        --page: #0d0d0d;
-        --surface: #1a1a19;
-        --ink: #ffffff;
-        --ink-2: #c3c2b7;
-        --muted: #898781;
-        --grid: #2c2c2a;
-        --axis: #383835;
-        --border: rgba(255, 255, 255, 0.1);
-        --good-text: #0ca30c;
-        --bad-text: #e66767;
+        --grid: color-mix(in srgb, var(--line-color) 28%, var(--background-color));
+        --axis: color-mix(in srgb, var(--line-color) 60%, var(--background-color));
+        --border: color-mix(in srgb, var(--line-color) 35%, var(--background-color));
+        --k2: color-mix(in srgb, var(--k1) 45%, var(--k3));
     }
+}
+
+:root.poxy-theme-dark {
+    color-scheme: dark;
 }
 
 * {
     box-sizing: border-box;
 }
 
+html {
+    scroll-behavior: smooth;
+    scroll-padding-top: 0; /* m.css sets 4em for its fixed navbar; ours is static */
+}
+
+@media (prefers-reduced-motion: reduce) {
+    html {
+        scroll-behavior: auto;
+    }
+}
+
 body {
+    /* m.css makes body a flex column for its sticky footer; ours flows normally */
+    display: block;
     margin: 0;
     background: var(--page);
     color: var(--ink);
-    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
-    font-size: 16px;
-    line-height: 1.55;
+    font-family: var(--font);
+    font-size: var(--font-size);
+    line-height: var(--line-height);
 }
 
-header {
-    border-bottom: 1px solid var(--border);
-    background: var(--surface);
-}
-
+/* the full-width translucent bar, link colours/padding and 3rem height all come
+   from m.css (poxy.css) via `body > header > nav`, matching the parent exactly;
+   we add only the flex row that lays out our plain-anchor markup, and align the
+   injected theme <button> to the same metrics as the links. */
 nav {
-    max-width: 860px;
-    margin: 0 auto;
-    padding: 0.7rem 1rem;
     display: flex;
-    align-items: baseline;
-    gap: 1.2rem;
-}
-
-nav a {
-    color: var(--ink-2);
-    text-decoration: none;
-}
-
-nav a:hover {
-    color: var(--accent);
+    align-items: center;
 }
 
 nav .brand {
-    color: var(--ink);
+    text-transform: var(--nav-brand-case);
+    font-weight: var(--heading-font-weight);
     margin-right: auto;
 }
 
 nav .brand strong {
-    color: var(--accent);
+    color: var(--header-link-current-color);
+}
+
+.theme-btn {
+    background: none;
+    border: none;
+    padding: 0 1rem;
+    font: inherit;
+    line-height: 2.75rem;
+    color: var(--header-link-color);
+    cursor: pointer;
+}
+
+.theme-btn:hover {
+    color: var(--header-link-active-color);
 }
 
 main {
@@ -85,36 +103,43 @@ main {
 }
 
 footer {
-    max-width: 860px;
-    margin: 0 auto;
+    margin-top: 2rem;
     padding: 1rem;
-    color: var(--muted);
-    font-size: 0.8rem;
-    border-top: 1px solid var(--border);
+    text-align: center;
+    background: var(--footer-background-color);
+    color: var(--footer-color);
+    font-size: var(--footer-font-size);
 }
 
 footer a {
-    color: var(--muted);
+    color: var(--footer-link-color);
 }
 
 h1 {
     font-size: 1.5rem;
+    font-weight: var(--heading-font-weight);
     margin: 1rem 0;
 }
 
 h2 {
     font-size: 1.15rem;
+    font-weight: var(--heading-font-weight);
     margin: 2.2rem 0 0.6rem;
 }
 
 h3 {
     font-size: 0.95rem;
+    font-weight: var(--heading-font-weight);
     color: var(--ink-2);
     margin: 1.4rem 0 0.4rem;
 }
 
 a {
     color: var(--accent);
+}
+
+a:hover {
+    color: var(--accent-2);
 }
 
 .tiles {
@@ -127,7 +152,7 @@ a {
 .tile {
     background: var(--surface);
     border: 1px solid var(--border);
-    border-radius: 10px;
+    border-radius: var(--border-radius);
     padding: 0.7rem 0.85rem;
 }
 
@@ -176,10 +201,11 @@ a {
 }
 
 .chart {
+    position: relative;
     margin: 1.6rem 0;
     background: var(--surface);
     border: 1px solid var(--border);
-    border-radius: 10px;
+    border-radius: var(--border-radius);
     padding: 0.8rem 1rem 0.6rem;
 }
 
@@ -191,6 +217,88 @@ a {
     display: block;
     width: 100%;
     height: auto;
+    /* horizontal drags scrub the tooltip; scrolling and zooming stay native */
+    touch-action: pan-y pinch-zoom;
+}
+
+.chart .variant:not(.active) {
+    display: none;
+}
+
+.ranges {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.9rem;
+    display: flex;
+    gap: 2px;
+}
+
+.ranges button {
+    background: none;
+    border: 1px solid var(--border);
+    padding: 0.05rem 0.55rem;
+    font: inherit;
+    font-size: 0.75rem;
+    color: var(--ink-2);
+    cursor: pointer;
+}
+
+.ranges button:first-child {
+    border-radius: 99px 0 0 99px;
+}
+
+.ranges button:last-child {
+    border-radius: 0 99px 99px 0;
+}
+
+.ranges button[aria-pressed="true"] {
+    color: var(--ink);
+    border-color: var(--accent);
+}
+
+@supports (color: color-mix(in srgb, red 50%, blue)) {
+    .ranges button[aria-pressed="true"] {
+        background: color-mix(in srgb, var(--accent) 14%, transparent);
+    }
+}
+
+/* narrow screens: below the title instead of overlapping it, bigger tap targets */
+@media (max-width: 600px) {
+    .ranges {
+        position: static;
+        justify-content: flex-end;
+        margin: -0.3rem 0 0.4rem;
+    }
+
+    .ranges button {
+        padding: 0.3rem 0.8rem;
+    }
+}
+
+.tip {
+    position: fixed;
+    z-index: 10;
+    background: var(--surface);
+    color: var(--ink);
+    border: 1px solid var(--axis);
+    border-radius: 6px;
+    padding: 0.15rem 0.5rem;
+    font-size: 0.75rem;
+    font-variant-numeric: tabular-nums;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+    pointer-events: none;
+    white-space: nowrap;
+}
+
+.hot {
+    stroke: var(--ink);
+    stroke-width: 1.5;
+}
+
+.xhair {
+    stroke: var(--muted);
+    stroke-width: 1;
+    stroke-dasharray: 3 3;
 }
 
 .chart-empty {
@@ -354,11 +462,30 @@ details table {
     overflow-y: auto;
 }
 
+details table th {
+    position: sticky;
+    top: 0;
+    background: var(--surface);
+}
+
+.monthnav {
+    color: var(--muted);
+    font-size: 0.8rem;
+}
+
+.monthnav a {
+    color: var(--ink-2);
+}
+
+.monthnav a:hover {
+    color: var(--accent);
+}
+
 .note,
 .prose {
     background: var(--surface);
     border: 1px solid var(--border);
-    border-radius: 10px;
+    border-radius: var(--border-radius);
     padding: 0.2rem 1.2rem;
     margin: 0.8rem 0;
 }
@@ -373,6 +500,11 @@ details table {
 
 .prose h2 {
     font-size: 1.1rem;
+}
+
+.prose code {
+    font-family: var(--code-font);
+    font-size: var(--code-font-size);
 }
 
 @media (max-width: 480px) {

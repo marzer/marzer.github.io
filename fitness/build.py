@@ -15,6 +15,9 @@ try:
 except ImportError:
     sys.exit("build.py requires the 'markdown' package: pip install markdown")
 
+if sys.stdout.encoding.lower() not in ("utf-8", "utf8"):  # cp1252 windows consoles
+    sys.stdout.reconfigure(errors="replace")
+
 ROOT = Path(__file__).resolve().parent
 
 SET_TOKEN = re.compile(r"^(\d+)x(bw|\d+(?:[.,]\d+)?)$", re.IGNORECASE)
@@ -217,6 +220,27 @@ def load_notes(notes_dir):
     return notes
 
 
+RANGE_RECENT = 28  # days shown by the "4w" chart variant
+
+
+def range_cutoff(dates):
+    # a "4w" variant is only worth offering once it hides a decent chunk of data
+    if not dates:
+        return None
+    lo, hi = min(dates), max(dates)
+    cutoff = hi - timedelta(days=RANGE_RECENT - 1)
+    return cutoff if (hi - lo).days >= RANGE_RECENT * 1.5 else None
+
+
+def variant_html(variants):
+    if len(variants) == 1:
+        return variants[0][1]
+    return "".join(
+        f'<div class="variant{" active" if i == 0 else ""}" data-range="{esc(label)}">{body}</div>'
+        for i, (label, body) in enumerate(variants)
+    )
+
+
 def rolling_mean(points, days=7):
     out = []
     for d, _ in points:
@@ -390,33 +414,45 @@ def weight_chart(weights, config):
     if len(points) < 2:
         return chart_figure("Weight (kg)", "", rows, ("date", "kg"), empty=True)
     trend = rolling_mean(points, 28)
-    vals = [v for _, v in points]
-    y0 = min(min(vals), goal_lo) - 0.8
-    y1 = max(vals) + 0.8
-    W, H = 720, 300
-    p = Plot(W, H, points[0][0], points[-1][0], y0, y1)
-    body = [p.frame(lambda v: f"{v:g}"), start_marker(p, config["start"])]
-    band_top = p.y(min(goal_hi, p.y1))
-    band_bot = p.y(max(goal_lo, p.y0))
-    body.append(
-        f'<rect class="goal-band" x="{p.ml}" y="{band_top:.1f}" '
-        f'width="{p.pw}" height="{band_bot - band_top:.1f}"/>'
-    )
-    body.append(
-        f'<text class="bandlabel" x="{p.w - p.mr - 6}" y="{band_top + 14:.1f}" '
-        f'text-anchor="end">goal {goal_lo:g}–{goal_hi:g}</text>'
-    )
-    for d, v in points:
-        body.append(
-            f'<circle class="dot-raw" cx="{p.x(d):.1f}" cy="{p.y(v):.1f}" r="2.5">'
-            f"<title>{fmt_date(d)}: {v:.1f} kg</title></circle>"
-        )
-    body.append(polyline(p, trend, "line-data"))
-    td, tv = trend[-1]
-    body.append(end_marker(p, td, tv, f"{tv:.1f}"))
+
+    def render(d_lo, with_goal):
+        disp = [(d, v) for d, v in points if d >= d_lo]
+        disp_trend = [(d, v) for d, v in trend if d >= d_lo]
+        # the trend averages in pre-window data, so it must shape the range too
+        vals = [v for _, v in disp] + [v for _, v in disp_trend]
+        y0 = (min(min(vals), goal_lo) if with_goal else min(vals)) - 0.8
+        y1 = (max(max(vals), goal_hi) if with_goal else max(vals)) + 0.8
+        W, H = 720, 300
+        p = Plot(W, H, disp[0][0], disp[-1][0], y0, y1)
+        body = [p.frame(lambda v: f"{v:g}"), start_marker(p, config["start"])]
+        band_top = p.y(min(goal_hi, p.y1))
+        band_bot = p.y(max(goal_lo, p.y0))
+        if band_bot - band_top > 1:
+            body.append(
+                f'<rect class="goal-band" x="{p.ml}" y="{band_top:.1f}" '
+                f'width="{p.pw}" height="{band_bot - band_top:.1f}"/>'
+            )
+            body.append(
+                f'<text class="bandlabel" x="{p.w - p.mr - 6}" y="{band_top + 14:.1f}" '
+                f'text-anchor="end">goal {goal_lo:g}–{goal_hi:g}</text>'
+            )
+        for d, v in disp:
+            body.append(
+                f'<circle class="dot-raw" cx="{p.x(d):.1f}" cy="{p.y(v):.1f}" r="2.5">'
+                f"<title>{fmt_date(d)}: {v:.1f} kg</title></circle>"
+            )
+        body.append(polyline(p, disp_trend, "line-data"))
+        td, tv = trend[-1]
+        body.append(end_marker(p, td, tv, f"{tv:.1f}"))
+        return svg(W, H, "".join(body))
+
+    cutoff = range_cutoff([d for d, _ in points])
+    variants = [("all", render(points[0][0], with_goal=True))]
+    if cutoff and sum(1 for d, _ in points if d >= cutoff) >= 2:
+        variants.append(("4w", render(cutoff, with_goal=False)))
     return chart_figure(
-        "Weight (kg) — all weigh-ins, 28-day trend",
-        svg(W, H, "".join(body)),
+        "Weight (kg) — weigh-ins, 28-day trend",
+        variant_html(variants),
         rows,
         ("date", "kg"),
     )
@@ -427,17 +463,17 @@ def running_chart(garmin_runs, manual_runs, config):
         r["date"]: r.get("knee") for r in manual_runs if r.get("knee") is not None
     }
     run_dates = sorted({r["date"] for r in garmin_runs} | set(knee_by_date))
-    weeks = {}
+    all_weeks = {}
     for r in garmin_runs:
-        weeks.setdefault(week_monday(r["date"]), 0.0)
-        weeks[week_monday(r["date"])] += r["duration_s"] / 60.0
+        all_weeks.setdefault(week_monday(r["date"]), 0.0)
+        all_weeks[week_monday(r["date"])] += r["duration_s"] / 60.0
     for d in knee_by_date:
-        weeks.setdefault(week_monday(d), 0.0)
+        all_weeks.setdefault(week_monday(d), 0.0)
     rows = [
         (fmt_date(wk), f"{mins:.0f}")
-        for wk, mins in sorted(weeks.items(), reverse=True)
+        for wk, mins in sorted(all_weeks.items(), reverse=True)
     ]
-    if not weeks or len(run_dates) < 2:
+    if not all_weeks or len(run_dates) < 2:
         return chart_figure(
             "Running — weekly minutes, knee response",
             "",
@@ -445,55 +481,64 @@ def running_chart(garmin_runs, manual_runs, config):
             ("week of", "min"),
             empty=True,
         )
-    d0 = week_monday(min(run_dates))
-    d1 = week_monday(max(run_dates)) + timedelta(days=6)
-    max_min = max(weeks.values())
-    W, strip_h, gap = 720, 76, 14
-    H = 308
-    p = Plot(W, H, d0, d1, 0, max(max_min * 1.15, 10))
-    p.mt = strip_h + gap + 10
-    p.ph = H - p.mt - p.mb
-    body = [p.frame(lambda v: f"{v:g}"), start_marker(p, config["start"])]
-    week_px = p.pw * 7 / max(1, (d1 - d0).days)
-    bw = min(24.0, week_px * 0.55)
-    latest_wk = max(weeks)
-    for wk, mins in sorted(weeks.items()):
-        cx = (p.x(wk) + p.x(wk + timedelta(days=6))) / 2
-        y = p.y(mins)
-        h = p.mt + p.ph - y
-        if h > 0.5:
+
+    def render(d_lo):
+        d0 = week_monday(d_lo)
+        d1 = week_monday(max(run_dates)) + timedelta(days=6)
+        weeks = {wk: mins for wk, mins in all_weeks.items() if wk >= d0}
+        max_min = max(weeks.values())
+        W, strip_h, gap = 720, 76, 14
+        H = 308
+        p = Plot(W, H, d0, d1, 0, max(max_min * 1.15, 10))
+        p.mt = strip_h + gap + 10
+        p.ph = H - p.mt - p.mb
+        body = [p.frame(lambda v: f"{v:g}"), start_marker(p, config["start"])]
+        week_px = p.pw * 7 / max(1, (d1 - d0).days)
+        bw = min(24.0, week_px * 0.55)
+        latest_wk = max(weeks)
+        for wk, mins in sorted(weeks.items()):
+            cx = (p.x(wk) + p.x(wk + timedelta(days=6))) / 2
+            y = p.y(mins)
+            h = p.mt + p.ph - y
+            if h > 0.5:
+                body.append(
+                    f'<path class="bar" d="{bar_path(cx - bw / 2, y, bw, h)}">'
+                    f"<title>week of {fmt_date(wk)}: {mins:.0f} min</title></path>"
+                )
+            if wk == latest_wk and mins > 0:
+                body.append(
+                    f'<text class="endlabel" x="{cx:.1f}" y="{y - 6:.1f}" '
+                    f'text-anchor="middle">{mins:.0f} min</text>'
+                )
+        strip_top = 10
+        level_y = lambda score: strip_top + (3 - score) * ((strip_h - 20) / 3) + 6
+        for score in (0, 1, 2, 3):
+            yy = level_y(score)
             body.append(
-                f'<path class="bar" d="{bar_path(cx - bw / 2, y, bw, h)}">'
-                f"<title>week of {fmt_date(wk)}: {mins:.0f} min</title></path>"
+                f'<text class="ticklabel" x="{p.ml - 6}" y="{yy + 3.5:.1f}" text-anchor="end">{score}</text>'
             )
-        if wk == latest_wk and mins > 0:
+        body.append(
+            f'<text class="striplabel" x="{p.ml}" y="{strip_top - 1}">knee score, morning after (0 = silent, 3 = bad)</text>'
+        )
+        for d in run_dates:
+            score = knee_by_date.get(d)
+            if score is None or d < d0:
+                continue
+            x, y = p.x(d), level_y(score)
             body.append(
-                f'<text class="endlabel" x="{cx:.1f}" y="{y - 6:.1f}" '
-                f'text-anchor="middle">{mins:.0f} min</text>'
+                f'<circle class="dot-ring" cx="{x:.1f}" cy="{y:.1f}" r="6.5"/>'
+                f'<circle class="knee k{score}" cx="{x:.1f}" cy="{y:.1f}" r="4.5">'
+                f"<title>{fmt_date(d)}: knee {score}</title></circle>"
             )
-    strip_top = 10
-    level_y = lambda score: strip_top + (3 - score) * ((strip_h - 20) / 3) + 6
-    for score in (0, 1, 2, 3):
-        yy = level_y(score)
-        body.append(
-            f'<text class="ticklabel" x="{p.ml - 6}" y="{yy + 3.5:.1f}" text-anchor="end">{score}</text>'
-        )
-    body.append(
-        f'<text class="striplabel" x="{p.ml}" y="{strip_top - 1}">knee score, morning after (0 = silent, 3 = bad)</text>'
-    )
-    for d in run_dates:
-        score = knee_by_date.get(d)
-        if score is None:
-            continue
-        x, y = p.x(d), level_y(score)
-        body.append(
-            f'<circle class="dot-ring" cx="{x:.1f}" cy="{y:.1f}" r="6.5"/>'
-            f'<circle class="knee k{score}" cx="{x:.1f}" cy="{y:.1f}" r="4.5">'
-            f"<title>{fmt_date(d)}: knee {score}</title></circle>"
-        )
+        return svg(W, H, "".join(body))
+
+    cutoff = range_cutoff(run_dates)
+    variants = [("all", render(min(run_dates)))]
+    if cutoff and sum(1 for wk in all_weeks if wk >= week_monday(cutoff)) >= 2:
+        variants.append(("4w", render(cutoff)))
     return chart_figure(
         "Running — weekly minutes, knee response",
-        svg(W, H, "".join(body)),
+        variant_html(variants),
         rows,
         ("week of", "min"),
     )
@@ -560,30 +605,41 @@ def simple_line_chart(
     rows = [(fmt_date(d), f"{v:.{decimals}f}") for d, v in reversed(points)]
     if len(points) < 2:
         return chart_figure(title, "", rows, ("date", unit), empty=True)
-    vv = [v for _, v in points]
-    pad = max((max(vv) - min(vv)) * 0.15, 1.0)
-    W, H = 720, 200
-    p = Plot(W, H, points[0][0], points[-1][0], min(vv) - pad, max(vv) + pad)
-    body = [p.frame(y_fmt), start_marker(p, start)]
-    if trend:
-        smoothed = rolling_mean(points)
-        for d, v in points:
-            body.append(
-                f'<circle class="dot-raw" cx="{p.x(d):.1f}" cy="{p.y(v):.1f}" r="2.5">'
-                f"<title>{fmt_date(d)}: {v:.{decimals}f} {unit}</title></circle>"
-            )
-        body.append(polyline(p, smoothed, "line-data"))
-        d, v = smoothed[-1]
-    else:
-        body.append(polyline(p, points, "line-data"))
-        for d, v in points[:-1]:
-            body.append(
-                f'<circle class="dot-mid" cx="{p.x(d):.1f}" cy="{p.y(v):.1f}" r="3">'
-                f"<title>{fmt_date(d)}: {v:.{decimals}f} {unit}</title></circle>"
-            )
-        d, v = points[-1]
-    body.append(end_marker(p, d, v, f"{v:.{decimals}f}"))
-    return chart_figure(title, svg(W, H, "".join(body)), rows, ("date", unit))
+    smoothed = rolling_mean(points) if trend else None
+
+    def render(d_lo):
+        disp = [(d, v) for d, v in points if d >= d_lo]
+        disp_smooth = [(d, v) for d, v in smoothed if d >= d_lo] if trend else []
+        # the rolling mean averages in pre-window data, so include it in the range
+        vv = [v for _, v in disp] + [v for _, v in disp_smooth]
+        pad = max((max(vv) - min(vv)) * 0.15, 1.0)
+        W, H = 720, 200
+        p = Plot(W, H, disp[0][0], disp[-1][0], min(vv) - pad, max(vv) + pad)
+        body = [p.frame(y_fmt), start_marker(p, start)]
+        if trend:
+            for d, v in disp:
+                body.append(
+                    f'<circle class="dot-raw" cx="{p.x(d):.1f}" cy="{p.y(v):.1f}" r="2.5">'
+                    f"<title>{fmt_date(d)}: {v:.{decimals}f} {unit}</title></circle>"
+                )
+            body.append(polyline(p, disp_smooth, "line-data"))
+            d, v = smoothed[-1]
+        else:
+            body.append(polyline(p, disp, "line-data"))
+            for d, v in disp[:-1]:
+                body.append(
+                    f'<circle class="dot-mid" cx="{p.x(d):.1f}" cy="{p.y(v):.1f}" r="3">'
+                    f"<title>{fmt_date(d)}: {v:.{decimals}f} {unit}</title></circle>"
+                )
+            d, v = disp[-1]
+        body.append(end_marker(p, d, v, f"{v:.{decimals}f}"))
+        return svg(W, H, "".join(body))
+
+    cutoff = range_cutoff([d for d, _ in points])
+    variants = [("all", render(points[0][0]))]
+    if cutoff and sum(1 for d, _ in points if d >= cutoff) >= 2:
+        variants.append(("4w", render(cutoff)))
+    return chart_figure(title, variant_html(variants), rows, ("date", unit))
 
 
 def tile(label, value, delta_html="", hero=False):
@@ -704,14 +760,25 @@ def page(title, body, depth, generated):
         f'<a class="ext" href="/">blog</a></nav>'
     )
     return (
-        f'<!DOCTYPE html>\n<html lang="en"><head><meta charset="utf-8">'
+        # theme classes + storage key are shared with the parent site (poxy.js),
+        # so one toggle switches both; the baked-in class is the no-JS default
+        f'<!DOCTYPE html>\n<html lang="en" class="poxy-theme-light"><head>'
+        f'<meta charset="utf-8">'
         f'<meta name="viewport" content="width=device-width, initial-scale=1">'
-        f'<meta name="color-scheme" content="light dark">'
         f"<title>{esc(title)}</title>"
+        # inherit the parent site's fonts + theme variables directly; fitness.css
+        # loads after and maps them onto its own layout. relative + depth-aware
+        # (poxy.css sits beside fitness/, so one level up from the fitness root)
+        # so the built site opens straight from file://, like poxy's own output
+        f'<link rel="stylesheet" href="{up}../poxy/poxy.css">'
         f'<link rel="stylesheet" href="{up}fitness.css">'
-        f'<link rel="icon" href="/favicon-light.png"></head>'
+        f'<link rel="icon" href="/favicon-light.png">'
+        f"<script>try{{const t=localStorage.getItem('poxy-theme');"
+        f"if(t==='dark'||t==='light')document.documentElement.className='poxy-theme-'+t}}"
+        f"catch(e){{}}</script>"
+        f'<script src="{up}fitness.js" defer></script></head>'
         f"<body><header>{nav}</header><main>{body}</main>"
-        f"<footer>generated {generated} · "
+        f'<footer>generated <span data-generated="{generated}">{generated}</span> · '
         f'<a href="https://github.com/marzer/marzer.github.io/tree/main/fitness">data &amp; source</a>'
         f"</footer></body></html>\n"
     )
@@ -785,9 +852,14 @@ def render_log(garmin, strength, manual_runs, measures, notes):
         '<p class="legend">knee = next-morning self-assessment, '
         '0 (silent) → 3 (bad) — full scale in the <a href="../program/">program</a></p>',
     ]
+    if len(months) > 1:
+        links = " · ".join(
+            f'<a href="#m{y}-{mo:02d}">{MONTHS[mo - 1][:3]} {y}</a>' for y, mo in months
+        )
+        parts.append(f'<p class="monthnav">jump to: {links}</p>')
     for y, mo in months:
         in_month = lambda d: d.year == y and d.month == mo
-        parts.append(f"<h2>{MONTHS[mo - 1]} {y}</h2>")
+        parts.append(f'<h2 id="m{y}-{mo:02d}">{MONTHS[mo - 1]} {y}</h2>')
         month_notes = [n for n in notes if in_month(n["date"])]
         for n in reversed(month_notes):
             parts.append(
@@ -920,6 +992,7 @@ def main():
         newline="\n",
     )
     shutil.copy2(src / "static" / "fitness.css", out / "fitness.css")
+    shutil.copy2(src / "static" / "fitness.js", out / "fitness.js")
 
     counts = (
         f"{len(garmin['weights'])} weigh-ins, {len(garmin['runs'])} runs, "
