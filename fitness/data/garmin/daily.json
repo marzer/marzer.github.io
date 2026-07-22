@@ -276,7 +276,17 @@
   {
    "date": "2026-07-19",
    "resting_hr": 84,
-   "steps": 46
+   "steps": 10757
+  },
+  {
+   "date": "2026-07-20",
+   "resting_hr": 68,
+   "steps": 13176
+  },
+  {
+   "date": "2026-07-21",
+   "resting_hr": 66,
+   "steps": 603
   }
  ]
 }
