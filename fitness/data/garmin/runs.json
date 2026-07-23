@@ -83,6 +83,13 @@
    "date": "2026-07-16",
    "distance_m": 6167,
    "duration_s": 2587
+  },
+  {
+   "avg_cadence": 161,
+   "avg_hr": 169,
+   "date": "2026-07-22",
+   "distance_m": 10206,
+   "duration_s": 4484
   }
  ]
 }

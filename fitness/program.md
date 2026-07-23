@@ -97,7 +97,7 @@ week.
 ## Deload
 
 Every 6th week, or early if lifts stall while sleep/motivation degrade: one set
-off every exercise, hold the run rung but cut durations ~30%. Scheduled recovery
+off every exercise, hold run volume but cut durations ~30%. Scheduled recovery
 is what makes 39 feel like a detail rather than a diagnosis.
 
 ## Phase 2 — entry criteria, not a date
