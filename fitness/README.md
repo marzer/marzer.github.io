@@ -47,7 +47,6 @@ rdl          = "12x24 12x24 12x24"
 
 [[run]]
 date = 2026-07-23
-rung = 1
 knee = 1
 
 [[measure]]
@@ -63,9 +62,8 @@ Known exercise keys (others work too, these just get pretty names):
 `goblet_squat` `floor_press` `row` `rdl` `reverse_lunge` `ohp` `pullover`
 `chin_ups` `hip_thrust`.
 
-`[[run]]` carries what Garmin can't know — chiefly the next-morning `knee`
-score (0–3); `rung` only applies during walk-run recovery weeks. It joins the
-synced Garmin activity by date.
+`[[run]]` carries the one thing Garmin can't know: the next-morning `knee`
+score (0–3). It joins the synced Garmin activity by date.
 
 Weekly notes are plain markdown at `notes/2026-W30.md` (ISO week).
 

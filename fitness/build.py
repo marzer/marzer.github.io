@@ -658,7 +658,7 @@ def delta_span(v, good_when_down, decimals=1, unit="", vs="vs last week"):
     return f'<div class="delta {cls}">{fmt_delta(v, decimals, unit)} <span class="vs">{esc(vs)}</span></div>'
 
 
-def build_tiles(garmin, strength, manual_runs, measures):
+def build_tiles(garmin, measures):
     tiles = []
     weights = [(r["date"], r["kg"]) for r in garmin["weights"]]
     if weights:
@@ -722,9 +722,6 @@ def build_tiles(garmin, strength, manual_runs, measures):
         tiles.append(
             tile("Steps, 7-day avg", f'{cur / 1000:.1f}<span class="unit">k</span>')
         )
-    rungs = [r["rung"] for r in manual_runs if "rung" in r]
-    if rungs:
-        tiles.append(tile("Ladder rung", f'{rungs[-1]}<span class="unit">/ 8</span>'))
     this_wk = week_monday(date.today())
     mins = sum(
         r["duration_s"] / 60
@@ -797,7 +794,7 @@ def program_line(config):
 
 def render_dashboard(garmin, strength, manual_runs, measures, notes, config):
     parts = ["<h1>fitness</h1>", program_line(config)]
-    parts.append(build_tiles(garmin, strength, manual_runs, measures))
+    parts.append(build_tiles(garmin, measures))
     parts.append(weight_chart(garmin["weights"], config))
     parts.append(running_chart(garmin["runs"], manual_runs, config))
     parts.append("<h2>Lifts — top set per session</h2>")
@@ -881,7 +878,6 @@ def render_log(garmin, strength, manual_runs, measures, notes):
                 rows.append(
                     "<tr>"
                     f"<td>{fmt_date(d)}</td>"
-                    f'<td class="num">{m.get("rung", "—")}</td>'
                     f'<td class="num">{dur}</td>'
                     f'<td class="num">{km}</td>'
                     f'<td class="num">{pace}</td>'
@@ -891,7 +887,7 @@ def render_log(garmin, strength, manual_runs, measures, notes):
                     "</tr>"
                 )
             parts.append(
-                "<h3>Runs</h3><table><thead><tr><th>date</th><th>rung</th><th>time</th>"
+                "<h3>Runs</h3><table><thead><tr><th>date</th><th>time</th>"
                 "<th>km</th><th>pace</th><th>HR</th><th>cad</th>"
                 '<th title="next-morning knee score: 0 silent, 3 altered gait">knee</th>'
                 "</tr></thead><tbody>" + "".join(rows) + "</tbody></table>"
