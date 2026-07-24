@@ -23,27 +23,29 @@ ROOT = Path(__file__).resolve().parent
 SET_TOKEN = re.compile(r"^(\d+)x(bw|\d+(?:[.,]\d+)?)$", re.IGNORECASE)
 NOTE_NAME = re.compile(r"^(\d{4})-W(\d{2})$")
 
-LIFT_ORDER = [
-    "goblet_squat",
-    "floor_press",
-    "row",
-    "rdl",
-    "reverse_lunge",
-    "ohp",
-    "pullover",
-    "chin_ups",
-    "hip_thrust",
-]
-LIFT_NAMES = {
+LIFTS = {
     "goblet_squat": "Goblet squat",
     "floor_press": "Floor press",
+    "bench_press": "Bench press",
     "row": "One-arm row",
     "rdl": "RDL",
+    "deadlift": "Deadlift",
+    "suitcase_carry": "Suitcase carry",
+    "lateral_raise": "Lateral raise",
     "reverse_lunge": "Reverse lunge",
+    "walking_lunge": "Walking lunge",
     "ohp": "Overhead press",
     "pullover": "Pullover",
     "chin_ups": "Chin-ups",
     "hip_thrust": "Hip thrust",
+    "side_plank": "Side plank",
+    "hammer_curl": "Hammer curl",
+    "overhead_triceps": "Overhead triceps extension",
+    "banded_walk": "Banded lateral walk",
+    "hip_abduction": "Side-lying hip abduction",
+    "step_down": "Step-down",
+    "wall_sit": "Wall sit",
+    "calf_raise": "Calf raise",
 }
 
 MONTHS = [
@@ -71,7 +73,7 @@ def esc(s):
 
 
 def lift_name(key):
-    return LIFT_NAMES.get(key, key.replace("_", " ").capitalize())
+    return LIFTS.get(key, key.replace("_", " ").capitalize())
 
 
 def parse_sets(text, where):
@@ -434,7 +436,7 @@ def weight_chart(weights, config):
             )
             body.append(
                 f'<text class="bandlabel" x="{p.w - p.mr - 6}" y="{band_top + 14:.1f}" '
-                f'text-anchor="end">goal {goal_lo:g}–{goal_hi:g}</text>'
+                f'text-anchor="end">goal {goal_lo:g}-{goal_hi:g}</text>'
             )
         for d, v in disp:
             body.append(
@@ -451,7 +453,7 @@ def weight_chart(weights, config):
     if cutoff and sum(1 for d, _ in points if d >= cutoff) >= 2:
         variants.append(("4w", render(cutoff, with_goal=False)))
     return chart_figure(
-        "Weight (kg) — weigh-ins, 28-day trend",
+        "Weight (kg): weigh-ins, 28-day trend",
         variant_html(variants),
         rows,
         ("date", "kg"),
@@ -475,7 +477,7 @@ def running_chart(garmin_runs, manual_runs, config):
     ]
     if not all_weeks or len(run_dates) < 2:
         return chart_figure(
-            "Running — weekly minutes, knee response",
+            "Running: weekly minutes, knee response",
             "",
             rows,
             ("week of", "min"),
@@ -537,7 +539,7 @@ def running_chart(garmin_runs, manual_runs, config):
     if cutoff and sum(1 for wk in all_weeks if wk >= week_monday(cutoff)) >= 2:
         variants.append(("4w", render(cutoff)))
     return chart_figure(
-        "Running — weekly minutes, knee response",
+        "Running: weekly minutes, knee response",
         variant_html(variants),
         rows,
         ("week of", "min"),
@@ -556,9 +558,10 @@ def lift_charts(strength):
                 series[key] = []
                 order.append(key)
             series[key].append((entry["date"], ts))
-    order.sort(key=lambda k: (LIFT_ORDER.index(k) if k in LIFT_ORDER else 99, k))
+    lift_rank = {k: i for i, k in enumerate(LIFTS)}
+    order.sort(key=lambda k: (lift_rank.get(k, len(LIFTS)), k))
     if not order:
-        return chart_figure("Lifts — top set per session", "", [], (), empty=True)
+        return chart_figure("Lifts: top set per session", "", [], (), empty=True)
     panels = []
     for key in order:
         pts = series[key]
@@ -571,7 +574,7 @@ def lift_charts(strength):
             last = vals[-1][1] if vals else None
             inner = (
                 f'<div class="chart-empty">{fmt_kg(last) if last is not None else "no data"}'
-                f"{' ' + unit if last is not None else ''} — need 2+ sessions to chart</div>"
+                f"{' ' + unit if last is not None else ''}, need 2+ sessions to chart</div>"
             )
             panels.append(
                 chart_figure(lift_name(key), inner, rows, ("date", "top set"))
@@ -683,7 +686,7 @@ def build_tiles(garmin, measures):
             )
         )
     else:
-        tiles.append(tile("Weight, 28-day trend", "—", hero=True))
+        tiles.append(tile("Weight, 28-day trend", "-", hero=True))
     if measures:
         waists = [(m["date"], m["waist"]) for m in measures if "waist" in m]
         if waists:
@@ -797,7 +800,7 @@ def render_dashboard(garmin, strength, manual_runs, measures, notes, config):
     parts.append(build_tiles(garmin, measures))
     parts.append(weight_chart(garmin["weights"], config))
     parts.append(running_chart(garmin["runs"], manual_runs, config))
-    parts.append("<h2>Lifts — top set per session</h2>")
+    parts.append("<h2>Lifts: top set per session</h2>")
     parts.append(lift_charts(strength))
     waists = [(m["date"], m["waist"]) for m in measures if "waist" in m]
     parts.append(simple_line_chart("Waist (cm)", waists, "cm", start=config["start"]))
@@ -808,7 +811,7 @@ def render_dashboard(garmin, strength, manual_runs, measures, notes, config):
     ]
     parts.append(
         simple_line_chart(
-            "Resting HR (bpm) — 7-day trend",
+            "Resting HR (bpm): 7-day trend",
             rhr,
             "bpm",
             decimals=0,
@@ -819,7 +822,7 @@ def render_dashboard(garmin, strength, manual_runs, measures, notes, config):
     if notes:
         latest = notes[-1]
         parts.append(
-            f"<h2>Latest note — {esc(latest['label'])}</h2>"
+            f"<h2>Latest note: {esc(latest['label'])}</h2>"
             f'<div class="note">{latest["html"]}</div>'
             f'<p><a href="log/">full log →</a></p>'
         )
@@ -847,7 +850,7 @@ def render_log(garmin, strength, manual_runs, measures, notes):
     parts = [
         "<h1>log</h1>",
         '<p class="legend">knee = next-morning self-assessment, '
-        '0 (silent) → 3 (bad) — full scale in the <a href="../program/">program</a></p>',
+        '0 (silent) → 3 (bad); full scale in the <a href="../program/">program</a></p>',
     ]
     if len(months) > 1:
         links = " · ".join(
@@ -871,19 +874,19 @@ def render_log(garmin, strength, manual_runs, measures, notes):
                 pace = (
                     fmt_pace(g["duration_s"] / (g["distance_m"] / 1000))
                     if g.get("distance_m")
-                    else "—"
+                    else "-"
                 )
-                dur = fmt_duration(g["duration_s"]) if g.get("duration_s") else "—"
-                km = f"{g['distance_m'] / 1000:.1f}" if g.get("distance_m") else "—"
+                dur = fmt_duration(g["duration_s"]) if g.get("duration_s") else "-"
+                km = f"{g['distance_m'] / 1000:.1f}" if g.get("distance_m") else "-"
                 rows.append(
                     "<tr>"
                     f"<td>{fmt_date(d)}</td>"
                     f'<td class="num">{dur}</td>'
                     f'<td class="num">{km}</td>'
                     f'<td class="num">{pace}</td>'
-                    f'<td class="num">{g.get("avg_hr", "—")}</td>'
-                    f'<td class="num">{g.get("avg_cadence", "—")}</td>'
-                    f'<td class="num">{m.get("knee", "—")}</td>'
+                    f'<td class="num">{g.get("avg_hr", "-")}</td>'
+                    f'<td class="num">{g.get("avg_cadence", "-")}</td>'
+                    f'<td class="num">{m.get("knee", "-")}</td>'
                     "</tr>"
                 )
             parts.append(
@@ -959,7 +962,7 @@ def main():
 
     (out / "index.html").write_text(
         page(
-            "fitness — marzer",
+            "fitness · marzer",
             render_dashboard(garmin, strength, manual_runs, measures, notes, config),
             0,
             generated,
@@ -969,7 +972,7 @@ def main():
     )
     (out / "log" / "index.html").write_text(
         page(
-            "log — fitness — marzer",
+            "log · fitness · marzer",
             render_log(garmin, strength, manual_runs, measures, notes),
             1,
             generated,
@@ -979,7 +982,7 @@ def main():
     )
     (out / "program" / "index.html").write_text(
         page(
-            "program — fitness — marzer",
+            "program · fitness · marzer",
             render_program(src / "program.md"),
             1,
             generated,

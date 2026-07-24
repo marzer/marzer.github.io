@@ -2,3 +2,12 @@
 date = 2026-07-22
 rung = 1
 knee = 1
+
+# REPSxWEIGHT
+
+[[strength]]
+date = 2026-07-24
+session = "B"                       # friday
+hammer_curl = "9x9 9x9 9x9"
+lateral_raise = "9x4.5 9x4.5 9x4.5"
+row = "9x9 9x9 9x9"
