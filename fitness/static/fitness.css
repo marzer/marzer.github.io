@@ -287,7 +287,8 @@ a:hover {
     font-variant-numeric: tabular-nums;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
     pointer-events: none;
-    white-space: nowrap;
+    white-space: normal;
+    max-width: min(340px, 85vw);
 }
 
 .hot {

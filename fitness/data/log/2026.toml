@@ -1,0 +1,27 @@
+# REPSxWEIGHT
+
+[[inactive]]
+date = 2026-07-27
+end = 2026-08-02
+label = "flu"
+
+[[strength]]
+date = 2026-07-24
+session = "B"                       # friday
+hammer_curl = "9x9 9x9 9x9"
+lateral_raise = "9x4.5 9x4.5 9x4.5"
+row = "9x9 9x9 9x9"
+
+[[run]]
+date = 2026-07-24
+knee = 1
+
+[[run]]
+date = 2026-07-22
+knee = 1
+
+[[inactive]]
+date = 2026-07-17
+end = 2026-07-20
+label = "travel"
+notes = "concert trip"

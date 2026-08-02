@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 import argparse
+import hashlib
 import html
+import itertools
 import json
 import math
 import re
@@ -122,6 +124,14 @@ def fmt_date(d):
     return f"{d.day} {d.strftime('%b')}"
 
 
+def fmt_span(a, b):
+    if a == b:
+        return fmt_date(a)
+    if (a.year, a.month) == (b.year, b.month):
+        return f"{a.day}–{b.day} {a.strftime('%b')}"
+    return f"{fmt_date(a)} – {fmt_date(b)}"
+
+
 def fmt_delta(v, decimals=1, unit=""):
     sign = "−" if v < 0 else "+"
     return f"{sign}{abs(v):.{decimals}f}{unit}"
@@ -164,7 +174,7 @@ def load_garmin(data_dir):
 
 
 def load_log(data_dir):
-    strength, runs, measures = [], [], []
+    strength, runs, measures, inactive = [], [], [], []
     for path in sorted((data_dir / "log").glob("*.toml")):
         try:
             doc = tomllib.loads(path.read_text(encoding="utf-8"))
@@ -195,10 +205,40 @@ def load_log(data_dir):
             if "date" not in entry:
                 fail(f"{path.name}: [[measure]] missing date")
             measures.append(entry)
+        for entry in doc.get("inactive", []):
+            where = f"{path.name}: [[inactive]] {entry.get('date', '?')}"
+            if "date" not in entry:
+                fail(f"{where}: missing date")
+            for k in entry:
+                if k not in ("date", "end", "label", "notes"):
+                    fail(f"{where}: unknown key '{k}'")
+            if type(entry["date"]) is not date:
+                fail(f"{where}: date must be a plain TOML date")
+            end = entry.get("end", entry["date"])
+            if type(end) is not date:
+                fail(f"{where}: end must be a plain TOML date")
+            if end < entry["date"]:
+                fail(f"{where}: end precedes date")
+            inactive.append(
+                {
+                    "date": entry["date"],
+                    "end": end,
+                    "label": str(entry.get("label", "inactive")),
+                    "notes": str(entry.get("notes", "")),
+                }
+            )
     strength.sort(key=lambda e: e["date"])
     runs.sort(key=lambda e: e["date"])
     measures.sort(key=lambda e: e["date"])
-    return strength, runs, measures
+    inactive.sort(key=lambda e: e["date"])
+    return strength, runs, measures, inactive
+
+
+def data_anchor(garmin, strength, manual_runs, measures, inactive):
+    dates = [r["date"] for rows in garmin.values() for r in rows]
+    dates += [e["date"] for e in strength + manual_runs + measures]
+    dates += [e["end"] for e in inactive]
+    return min(max(dates), date.today()) if dates else None
 
 
 def load_notes(notes_dir):
@@ -225,13 +265,12 @@ def load_notes(notes_dir):
 RANGE_RECENT = 28  # days shown by the "4w" chart variant
 
 
-def range_cutoff(dates):
+def range_cutoff(dates, anchor):
     # a "4w" variant is only worth offering once it hides a decent chunk of data
-    if not dates:
+    if not dates or anchor is None:
         return None
-    lo, hi = min(dates), max(dates)
-    cutoff = hi - timedelta(days=RANGE_RECENT - 1)
-    return cutoff if (hi - lo).days >= RANGE_RECENT * 1.5 else None
+    cutoff = anchor - timedelta(days=RANGE_RECENT - 1)
+    return cutoff if (anchor - min(dates)).days >= RANGE_RECENT * 1.5 else None
 
 
 def variant_html(variants):
@@ -367,7 +406,7 @@ def start_marker(p, start):
     if start is None or start <= p.d0 or start > p.d1:
         return ""
     x = p.x(start)
-    flip = x > p.w - p.mr - 80
+    flip = x - p.ml > 90
     lx = x - 4 if flip else x + 4
     anchor = "end" if flip else "start"
     return (
@@ -375,6 +414,52 @@ def start_marker(p, start):
         f'<line class="start-line" x1="{x:.1f}" y1="{p.mt}" x2="{x:.1f}" y2="{p.mt + p.ph}"/>'
         f'<text class="striplabel" x="{lx:.1f}" y="{p.mt + 11:.1f}" text-anchor="{anchor}">program start</text>'
     )
+
+
+_hatch_ids = itertools.count(1)
+
+
+def inactive_bands(p, periods, start=None):
+    parts = []
+    left, right = p.ml, p.ml + p.pw
+    pid = None
+    for per in periods:
+        x0 = max(p.x(per["date"]), left)
+        x1 = min(p.x(per["end"] + timedelta(days=1)), right)
+        if x1 <= x0:
+            continue
+        if x1 - x0 < 5:
+            cx = (x0 + x1) / 2
+            x0, x1 = max(cx - 2.5, left), min(cx + 2.5, right)
+        if pid is None:
+            pid = next(_hatch_ids)
+            parts.append(
+                f'<defs><pattern id="hatch{pid}" width="7" height="7" '
+                f'patternUnits="userSpaceOnUse" patternTransform="rotate(45)">'
+                f'<rect width="7" height="7" style="fill:var(--k1,#d09540);opacity:0.06"/>'
+                f'<line y2="7" style="stroke:var(--k1,#d09540);opacity:0.3"/>'
+                f"</pattern></defs>"
+            )
+        tip = f"{fmt_span(per['date'], per['end'])}: {per['label']}"
+        if per["notes"]:
+            tip += f" — {per['notes']}"
+        parts.append(
+            f'<rect class="inactive-band" fill="url(#hatch{pid})" x="{x0:.1f}" y="{p.mt}" '
+            f'width="{x1 - x0:.1f}" height="{p.ph}"><title>{esc(tip)}</title></rect>'
+        )
+        lx = x1 - 6
+        est = len(per["label"]) * 6.2
+        ly = p.mt + 11
+        if start and p.d0 < start <= p.d1:
+            sx = p.x(start)
+            s0, s1 = (sx - 88, sx) if sx - p.ml > 90 else (sx, sx + 88)
+            if lx > s0 and lx - est < s1:
+                ly += 11
+        parts.append(
+            f'<text class="striplabel" x="{lx:.1f}" y="{ly:.1f}" '
+            f'text-anchor="end">{esc(per["label"])}</text>'
+        )
+    return "".join(parts)
 
 
 def bar_path(x, y, w, h, r=4):
@@ -425,7 +510,7 @@ def weight_chart(weights, config):
         y0 = (min(min(vals), goal_lo) if with_goal else min(vals)) - 0.8
         y1 = (max(max(vals), goal_hi) if with_goal else max(vals)) + 0.8
         W, H = 720, 300
-        p = Plot(W, H, disp[0][0], disp[-1][0], y0, y1)
+        p = Plot(W, H, d_lo, config["anchor"], y0, y1)
         body = [p.frame(lambda v: f"{v:g}"), start_marker(p, config["start"])]
         band_top = p.y(min(goal_hi, p.y1))
         band_bot = p.y(max(goal_lo, p.y0))
@@ -438,6 +523,7 @@ def weight_chart(weights, config):
                 f'<text class="bandlabel" x="{p.w - p.mr - 6}" y="{band_top + 14:.1f}" '
                 f'text-anchor="end">goal {goal_lo:g}-{goal_hi:g}</text>'
             )
+        body.append(inactive_bands(p, config["inactive"], config["start"]))
         for d, v in disp:
             body.append(
                 f'<circle class="dot-raw" cx="{p.x(d):.1f}" cy="{p.y(v):.1f}" r="2.5">'
@@ -448,7 +534,7 @@ def weight_chart(weights, config):
         body.append(end_marker(p, td, tv, f"{tv:.1f}"))
         return svg(W, H, "".join(body))
 
-    cutoff = range_cutoff([d for d, _ in points])
+    cutoff = range_cutoff([d for d, _ in points], config["anchor"])
     variants = [("all", render(points[0][0], with_goal=True))]
     if cutoff and sum(1 for d, _ in points if d >= cutoff) >= 2:
         variants.append(("4w", render(cutoff, with_goal=False)))
@@ -486,7 +572,7 @@ def running_chart(garmin_runs, manual_runs, config):
 
     def render(d_lo):
         d0 = week_monday(d_lo)
-        d1 = week_monday(max(run_dates)) + timedelta(days=6)
+        d1 = week_monday(config["anchor"]) + timedelta(days=6)
         weeks = {wk: mins for wk, mins in all_weeks.items() if wk >= d0}
         max_min = max(weeks.values())
         W, strip_h, gap = 720, 76, 14
@@ -494,7 +580,11 @@ def running_chart(garmin_runs, manual_runs, config):
         p = Plot(W, H, d0, d1, 0, max(max_min * 1.15, 10))
         p.mt = strip_h + gap + 10
         p.ph = H - p.mt - p.mb
-        body = [p.frame(lambda v: f"{v:g}"), start_marker(p, config["start"])]
+        body = [
+            p.frame(lambda v: f"{v:g}"),
+            start_marker(p, config["start"]),
+            inactive_bands(p, config["inactive"], config["start"]),
+        ]
         week_px = p.pw * 7 / max(1, (d1 - d0).days)
         bw = min(24.0, week_px * 0.55)
         latest_wk = max(weeks)
@@ -534,7 +624,7 @@ def running_chart(garmin_runs, manual_runs, config):
             )
         return svg(W, H, "".join(body))
 
-    cutoff = range_cutoff(run_dates)
+    cutoff = range_cutoff(run_dates, config["anchor"])
     variants = [("all", render(min(run_dates)))]
     if cutoff and sum(1 for wk in all_weeks if wk >= week_monday(cutoff)) >= 2:
         variants.append(("4w", render(cutoff)))
@@ -603,7 +693,15 @@ def lift_charts(strength):
 
 
 def simple_line_chart(
-    title, points, unit, y_fmt=lambda v: f"{v:g}", decimals=1, trend=False, start=None
+    title,
+    points,
+    unit,
+    y_fmt=lambda v: f"{v:g}",
+    decimals=1,
+    trend=False,
+    start=None,
+    anchor=None,
+    bands=(),
 ):
     rows = [(fmt_date(d), f"{v:.{decimals}f}") for d, v in reversed(points)]
     if len(points) < 2:
@@ -617,8 +715,8 @@ def simple_line_chart(
         vv = [v for _, v in disp] + [v for _, v in disp_smooth]
         pad = max((max(vv) - min(vv)) * 0.15, 1.0)
         W, H = 720, 200
-        p = Plot(W, H, disp[0][0], disp[-1][0], min(vv) - pad, max(vv) + pad)
-        body = [p.frame(y_fmt), start_marker(p, start)]
+        p = Plot(W, H, d_lo, anchor or disp[-1][0], min(vv) - pad, max(vv) + pad)
+        body = [p.frame(y_fmt), start_marker(p, start), inactive_bands(p, bands, start)]
         if trend:
             for d, v in disp:
                 body.append(
@@ -638,7 +736,7 @@ def simple_line_chart(
         body.append(end_marker(p, d, v, f"{v:.{decimals}f}"))
         return svg(W, H, "".join(body))
 
-    cutoff = range_cutoff([d for d, _ in points])
+    cutoff = range_cutoff([d for d, _ in points], anchor)
     variants = [("all", render(points[0][0]))]
     if cutoff and sum(1 for d, _ in points if d >= cutoff) >= 2:
         variants.append(("4w", render(cutoff)))
@@ -752,7 +850,7 @@ def build_tiles(garmin, measures):
     return '<div class="tiles">' + "".join(tiles) + "</div>"
 
 
-def page(title, body, depth, generated):
+def page(title, body, depth, generated, assets):
     up = "../" * depth
     nav = (
         f'<nav><a class="brand" href="{up if depth else "./"}">marzer / <strong>fitness</strong></a>'
@@ -771,12 +869,12 @@ def page(title, body, depth, generated):
         # (poxy.css sits beside fitness/, so one level up from the fitness root)
         # so the built site opens straight from file://, like poxy's own output
         f'<link rel="stylesheet" href="{up}../poxy/poxy.css">'
-        f'<link rel="stylesheet" href="{up}fitness.css">'
+        f'<link rel="stylesheet" href="{up}fitness.css?v={assets}">'
         f'<link rel="icon" href="/favicon-light.png">'
         f"<script>try{{const t=localStorage.getItem('poxy-theme');"
         f"if(t==='dark'||t==='light')document.documentElement.className='poxy-theme-'+t}}"
         f"catch(e){{}}</script>"
-        f'<script src="{up}fitness.js" defer></script></head>'
+        f'<script src="{up}fitness.js?v={assets}" defer></script></head>'
         f"<body><header>{nav}</header><main>{body}</main>"
         f'<footer>generated <span data-generated="{generated}">{generated}</span> · '
         f'<a href="https://github.com/marzer/marzer.github.io/tree/main/fitness">data &amp; source</a>'
@@ -803,7 +901,16 @@ def render_dashboard(garmin, strength, manual_runs, measures, notes, config):
     parts.append("<h2>Lifts: top set per session</h2>")
     parts.append(lift_charts(strength))
     waists = [(m["date"], m["waist"]) for m in measures if "waist" in m]
-    parts.append(simple_line_chart("Waist (cm)", waists, "cm", start=config["start"]))
+    parts.append(
+        simple_line_chart(
+            "Waist (cm)",
+            waists,
+            "cm",
+            start=config["start"],
+            anchor=config["anchor"],
+            bands=config["inactive"],
+        )
+    )
     rhr = [
         (r["date"], float(r["resting_hr"]))
         for r in garmin["daily"]
@@ -817,6 +924,8 @@ def render_dashboard(garmin, strength, manual_runs, measures, notes, config):
             decimals=0,
             trend=True,
             start=config["start"],
+            anchor=config["anchor"],
+            bands=config["inactive"],
         )
     )
     if notes:
@@ -950,9 +1059,15 @@ def main():
     src = args.src.resolve()
     config = load_config(src / "data")
     garmin = load_garmin(src / "data")
-    strength, manual_runs, measures = load_log(src / "data")
+    strength, manual_runs, measures, inactive = load_log(src / "data")
     notes = load_notes(src / "notes")
+    config["inactive"] = inactive
+    config["anchor"] = data_anchor(garmin, strength, manual_runs, measures, inactive)
     generated = date.today().isoformat()
+    assets = hashlib.md5(
+        (src / "static" / "fitness.css").read_bytes()
+        + (src / "static" / "fitness.js").read_bytes()
+    ).hexdigest()[:8]
 
     out = args.out.resolve()
     if out.exists():
@@ -966,6 +1081,7 @@ def main():
             render_dashboard(garmin, strength, manual_runs, measures, notes, config),
             0,
             generated,
+            assets,
         ),
         encoding="utf-8",
         newline="\n",
@@ -976,6 +1092,7 @@ def main():
             render_log(garmin, strength, manual_runs, measures, notes),
             1,
             generated,
+            assets,
         ),
         encoding="utf-8",
         newline="\n",
@@ -986,6 +1103,7 @@ def main():
             render_program(src / "program.md"),
             1,
             generated,
+            assets,
         ),
         encoding="utf-8",
         newline="\n",
@@ -995,7 +1113,8 @@ def main():
 
     counts = (
         f"{len(garmin['weights'])} weigh-ins, {len(garmin['runs'])} runs, "
-        f"{len(strength)} strength sessions, {len(notes)} notes"
+        f"{len(strength)} strength sessions, {len(inactive)} inactive periods, "
+        f"{len(notes)} notes"
     )
     print(f"fitness site → {out} ({counts})")
 

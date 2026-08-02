@@ -28,13 +28,14 @@ fitness/
 ├── data/
 │   ├── config.toml   program start date + goal weight band
 │   ├── garmin/       machine-written JSON (sync.py); summary metrics only, never GPS
-│   └── log/          hand-written TOML, one file per month
+│   └── log/          hand-written TOML, one file per year
 └── notes/            weekly commentary, markdown, named YYYY-Wnn.md
 ```
 
 ## Logging (phone-friendly, via GitHub web editor or anything else)
 
-Everything manual goes in `data/log/YYYY-MM.toml`:
+Everything manual goes in `data/log/YYYY.toml` (the loader just merges every
+TOML file in `log/`, so the yearly split is convention, not contract):
 
 ```toml
 [[strength]]
@@ -64,6 +65,22 @@ just renders as its own name.
 
 `[[run]]` carries the one thing Garmin can't know: the next-morning `knee`
 score (0-3). It joins the synced Garmin activity by date.
+
+Downtime (travel, illness) is logged the same way, and renders as a hatched
+band on the dated charts:
+
+```toml
+[[inactive]]
+date = 2026-07-27       # first (or only) day
+end = 2026-08-02        # optional; makes it an inclusive range
+label = "flu"           # optional; drawn inside the band (default "inactive")
+notes = "the plague"    # optional; shown in the hover tooltip
+```
+
+Charts always run out to the newest date found anywhere in the data — an
+inactive period's `end` counts — so logging downtime moves the right edge
+of every chart even when nothing else does. The 4w view is the same window
+everywhere: the 28 days ending on that date.
 
 Weekly notes are plain markdown at `notes/2026-W30.md` (ISO week).
 
