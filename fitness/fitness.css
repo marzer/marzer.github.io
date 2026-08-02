@@ -31,10 +31,6 @@
         --border: color-mix(in srgb, var(--line-color) 35%, var(--background-color));
         --k2: color-mix(in srgb, var(--k1) 45%, var(--k3));
     }
-
-    .inactive-label {
-        fill: color-mix(in srgb, var(--k1) 55%, var(--ink));
-    }
 }
 
 :root.poxy-theme-dark {
@@ -398,26 +394,6 @@ a:hover {
 .start-line {
     stroke: var(--muted);
     stroke-width: 1;
-}
-
-.inactive-band {
-    fill: url(#hatch);
-}
-
-.hatch-tint {
-    fill: var(--k1);
-    opacity: 0.06;
-}
-
-.hatch-line {
-    stroke: var(--k1);
-    stroke-width: 1;
-    opacity: 0.3;
-}
-
-.inactive-label {
-    fill: var(--k1);
-    font-size: 11px;
 }
 
 .bar {
