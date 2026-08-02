@@ -106,14 +106,15 @@
     // ---- chart tooltips + crosshair ----------------------------------------
     for (const svg of document.querySelectorAll(".chart svg")) {
         const targets = [];
-        for (const el of svg.querySelectorAll("circle, path.bar")) {
+        const bands = [];
+        for (const el of svg.querySelectorAll("circle, path.bar, rect.inactive-band")) {
             const title = el.querySelector("title");
             if (!title) continue;
-            targets.push([el, title.textContent]);
+            (el.tagName === "rect" ? bands : targets).push([el, title.textContent]);
             el.setAttribute("aria-label", title.textContent);
             title.remove(); // native tooltip would fight ours
         }
-        if (!targets.length) continue;
+        if (!targets.length && !bands.length) continue;
         const axis = svg.querySelector("line.axis");
 
         const show = (e) => {
@@ -125,6 +126,17 @@
                 const dy = Math.max(r.top - e.clientY, 0, e.clientY - r.bottom);
                 const d = dx * dx + dy * dy;
                 if (d < bestD) [bestD, best] = [d, [el, label]];
+            }
+            if (!best) {
+                for (const [el, label] of bands) {
+                    const r = el.getBoundingClientRect();
+                    const dx = Math.max(r.left - e.clientX, 0, e.clientX - r.right);
+                    const dy = Math.max(r.top - e.clientY, 0, e.clientY - r.bottom);
+                    if (dx * dx + dy * dy <= 25) {
+                        best = [el, label];
+                        break;
+                    }
+                }
             }
             if (!best) return hideTip();
             const [el, label] = best;
