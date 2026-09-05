@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:dc="http://purl.org/dc/elements/1.1/">
+	<channel>
+		<title>marzer.github.io</title>
+		<link>https://marzer.github.io/</link>
+		<description>Personal devblog of Mark 'marzer' Gillard</description>
+		<atom:link href="https://marzer.github.io/feed.xml" rel="self" type="application/rss+xml" />
+		<pubDate>Mon, 31 May 2021 00:00:00 GMT</pubDate>
+		<item>
+			<title>Compilation speed humps: std::tuple</title>
+			<link>https://marzer.github.io/blog_2021_05_31_compilation_speed_humps_std_tuple.html</link>
+			<guid isPermaLink="false">tag:marzer.github.io,2021-05-31:blog_2021_05_31_compilation_speed_humps_std_tuple</guid>
+			<pubDate>Mon, 31 May 2021 00:00:00 GMT</pubDate>
+			<description>How std::tuple took a CI build from 7 minutes to 35, and the bespoke type list that undid it.</description>
+			<dc:creator>Mark Gillard</dc:creator>
+			<category>c++</category>
+			<category>compile times</category>
+			<category>metaprogramming</category>
+		</item>
+	</channel>
+</rss>
