@@ -2,6 +2,7 @@ name = 'marzer.github.io'
 description = '''Personal devblog of Mark 'marzer' Gillard'''
 license = 'MIT'
 author = 'Mark Gillard'
+site_url = 'https://marzer.github.io'
 cpp = 29
 generate_tagfile = false
 show_includes = false

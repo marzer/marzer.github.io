@@ -1,3 +1,9 @@
++++
+description = "How std::tuple took a CI build from 7 minutes to 35, and the bespoke type list that undid it."
+tags        = ["c++", "compile times", "metaprogramming"]
+aliases     = ["md_blog_22021-05-31__compilation__speed__humps__std__tuple"]
++++
+
 # Compilation speed humps: std::tuple
 
 \tableofcontents
@@ -62,7 +68,9 @@ Not wanting to undo my refactor, I settled on a solution that would slice the st
 per-TU batch number (set using `-DBATCH_INDEX=N`). Now it would compile on my machine. Hooray! It also seemed relatively
 performant. (But, again, Ryzen 3950X.) Once up on CircleCI the problem became obvious:
 
-\figure{tuple_circle_ci_slow.jpg, 35 minutes? No thanks.}
+![CircleCI reporting a build time of over 35 minutes](tuple_circle_ci_slow.jpg)
+
+_35 minutes? No thanks._
 
 Clearly there was much more work to be done.
 
@@ -94,7 +102,7 @@ taken by other compilers.
 
 Using `-ftime-trace` with the code in question immediately gave me a very strong signal of where to start:
 
-\figure{tuple_flamegraph_1.jpg}
+![a -ftime-trace flame graph, with the std::tuple instantiation chain boxed in red](tuple_flamegraph_1.jpg)
 
 The part in the red box is the instantiation chain for std::tuple; since it is (typically) implemented recursively,
 instantiating something like `std::tuple<int, float, double>` requires instantiating `std::tuple<float, double>`, and soforth,
@@ -147,7 +155,7 @@ GCC seemed pretty happy with just that, but even 3.6 seconds for one TU was not 
 
 Even after eliminating all the std::tuple instantiations the trace graph was still a mess:
 
-\figure{tuple_flamegraph_2.jpg}
+![the flame graph after the std::tuple instantiations are gone, still dense](tuple_flamegraph_2.jpg)
 
 It was at this point it became apparent that the only way forward would be to get rid of std::tuple altogether; no
 matter how I re-wrote my test machinery, the tuple itself was always the cause of the instantiation explosion you see
@@ -244,7 +252,7 @@ After replacing the tuples with `type_list`:
 
 Hmmmm. Womp-womp. Let's take a look at the trace graph:
 
-\figure{tuple_flamegraph_3.jpg}
+![the flame graph for the first type list attempt, shaped much like std::tuple's](tuple_flamegraph_3.jpg)
 
 Somewhat unsurprisingly it looks very similar to the std::tuple one, only this time the instantiation cost is paid using
 my helper templates, rather than the ones from the standard library. This was a blessing in disguise, though! Since I had
@@ -290,7 +298,7 @@ Assuming a good value for N this should eliminate a good chunk of the recursion 
 
 Oh.
 
-\figure{everyone_disliked_that.jpg}
+![the Fallout 76 "Everyone disliked that." notification](everyone_disliked_that.jpg)
 
 Still, the trace graph did show that the compiler spent far less time instantiating selectors for types 0 - 63.
 At this point it occurred to me that the `type_list` in question was hundreds of types long; unless I specialized the
@@ -416,7 +424,7 @@ Alright, fingers-crossed:
 | specializing slice prefix selection   | 7.985s     | 9.524s     | CRASH      |
 | **pagination**                        | **0.777s** | **1.026s** | **2.014s** |
 
-\figure{so_good.jpg}
+![the "so good" face-caressing meme](so_good.jpg)
 
 There it was. The money shot. Cumulatively:
 
@@ -426,12 +434,12 @@ There it was. The money shot. Cumulatively:
 
 And one final look at the time-trace graph:
 
-\figure{tuple_flamegraph_4.jpg}
+![the final flame graph, with only a small red sliver left](tuple_flamegraph_4.jpg)
 
 The all-encompassing rainbow instantiation wall had been replaced by that tiny bit in red. Wonderful. What about the CI
 server that brought me here to begin with?
 
-\figure{tuple_circle_ci_fast.jpg}
+![CircleCI reporting a build time of a few minutes](tuple_circle_ci_fast.jpg)
 
 Much more wallet-friendly.
 
@@ -540,7 +548,3 @@ In order of likely response speed:
 [synthetic re-creation of the problem]: https://github.com/marzer/type_list/blob/main/examples/comparison_main.cpp
 [pointed out]: https://www.reddit.com/r/cpp/comments/npfrnq/compilation_speed_humps_stdtuple/h060r7w
 [r/cpp post]: https://www.reddit.com/r/cpp/comments/npfrnq/compilation_speed_humps_stdtuple/
-
-<!--[poxy_metadata[
-tags = []
-]]-->

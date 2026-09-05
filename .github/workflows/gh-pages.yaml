@@ -9,6 +9,7 @@ on:
             - "**.hpp"
             - "**.dox"
             - "**.md"
+            - "blog/**"
             - "docs/**"
             - "fitness/**"
             - "poxy.toml"
