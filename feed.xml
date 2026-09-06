@@ -5,7 +5,20 @@
 		<link>https://marzer.github.io/</link>
 		<description>Personal devblog of Mark 'marzer' Gillard</description>
 		<atom:link href="https://marzer.github.io/feed.xml" rel="self" type="application/rss+xml" />
-		<pubDate>Sun, 09 Aug 2026 00:00:00 GMT</pubDate>
+		<pubDate>Sun, 06 Sep 2026 00:00:00 GMT</pubDate>
+		<item>
+			<title>gg, jam 1: undercooked</title>
+			<link>https://marzer.github.io/blog_2026_09_06.html</link>
+			<guid isPermaLink="false">tag:marzer.github.io,2026-09-06:blog_2026_09_06</guid>
+			<pubDate>Sun, 06 Sep 2026 00:00:00 GMT</pubDate>
+			<description>The first attempt at a game jam using engine, and what fell out of it.</description>
+			<dc:creator>Mark Gillard</dc:creator>
+			<category>c++</category>
+			<category>gamedev</category>
+			<category>engine</category>
+			<category>claude</category>
+			<category>jam</category>
+		</item>
 		<item>
 			<title>gg, week 1: something from nothing</title>
 			<link>https://marzer.github.io/blog_2026_08_09.html</link>
