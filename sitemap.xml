@@ -7,8 +7,15 @@
 		<loc>https://marzer.github.io/blog.html</loc>
 	</url>
 	<url>
-		<loc>https://marzer.github.io/blog_2021_05_31_compilation_speed_humps_std_tuple.html</loc>
+		<loc>https://marzer.github.io/blog_2021_05_31.html</loc>
 		<lastmod>2021-05-31</lastmod>
+	</url>
+	<url>
+		<loc>https://marzer.github.io/blog_2026_08_09.html</loc>
+		<lastmod>2026-08-09</lastmod>
+	</url>
+	<url>
+		<loc>https://marzer.github.io/blog_tag_claude.html</loc>
 	</url>
 	<url>
 		<loc>https://marzer.github.io/blog_tag_compile_times.html</loc>
@@ -17,7 +24,16 @@
 		<loc>https://marzer.github.io/blog_tag_cpp.html</loc>
 	</url>
 	<url>
+		<loc>https://marzer.github.io/blog_tag_engine.html</loc>
+	</url>
+	<url>
+		<loc>https://marzer.github.io/blog_tag_gamedev.html</loc>
+	</url>
+	<url>
 		<loc>https://marzer.github.io/blog_tag_metaprogramming.html</loc>
+	</url>
+	<url>
+		<loc>https://marzer.github.io/blog_tag_sdl3.html</loc>
 	</url>
 	<url>
 		<loc>https://marzer.github.io/blog_tags.html</loc>
