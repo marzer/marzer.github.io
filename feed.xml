@@ -11,13 +11,65 @@
 			<link>https://marzer.github.io/blog_2026_09_06.html</link>
 			<guid isPermaLink="false">tag:marzer.github.io,2026-09-06:blog_2026_09_06</guid>
 			<pubDate>Sun, 06 Sep 2026 00:00:00 GMT</pubDate>
-			<description>The first attempt at a game jam using engine, and what fell out of it.</description>
+			<description>The first attempt at a game jam using the engine, and what fell out of it.</description>
 			<dc:creator>Mark Gillard</dc:creator>
 			<category>c++</category>
 			<category>gamedev</category>
 			<category>engine</category>
 			<category>claude</category>
 			<category>jam</category>
+		</item>
+		<item>
+			<title>gg, week 5: shapes, sound and a UI</title>
+			<link>https://marzer.github.io/blog_2026_09_05.html</link>
+			<guid isPermaLink="false">tag:marzer.github.io,2026-09-05:blog_2026_09_05</guid>
+			<pubDate>Sat, 05 Sep 2026 00:00:00 GMT</pubDate>
+			<description>An engine that makes noise and draws a menu, a mixer that never touches the frame loop, and what a month of this actually produced.</description>
+			<dc:creator>Mark Gillard</dc:creator>
+			<category>c++</category>
+			<category>gamedev</category>
+			<category>engine</category>
+			<category>audio</category>
+			<category>ui</category>
+		</item>
+		<item>
+			<title>gg, week 4: clouds, scale, and taking the look back out</title>
+			<link>https://marzer.github.io/blog_2026_08_30.html</link>
+			<guid isPermaLink="false">tag:marzer.github.io,2026-08-30:blog_2026_08_30</guid>
+			<pubDate>Sun, 30 Aug 2026 00:00:00 GMT</pubDate>
+			<description>A rim light that turned out to be most of a moonlit frame, proper clouds, deleting the art direction, and a frame that cost 12.9 ms drawing nothing.</description>
+			<dc:creator>Mark Gillard</dc:creator>
+			<category>c++</category>
+			<category>gamedev</category>
+			<category>engine</category>
+			<category>rendering</category>
+			<category>performance</category>
+		</item>
+		<item>
+			<title>gg, week 3: terrain, and a sky that knows what time it is</title>
+			<link>https://marzer.github.io/blog_2026_08_23.html</link>
+			<guid isPermaLink="false">tag:marzer.github.io,2026-08-23:blog_2026_08_23</guid>
+			<pubDate>Sun, 23 Aug 2026 00:00:00 GMT</pubDate>
+			<description>Terrain as a document instead of a mesh, a physical atmosphere driven by the scene's own clock, and a moon bug only a number could catch.</description>
+			<dc:creator>Mark Gillard</dc:creator>
+			<category>c++</category>
+			<category>gamedev</category>
+			<category>engine</category>
+			<category>rendering</category>
+			<category>terrain</category>
+		</item>
+		<item>
+			<title>gg, week 2: an editor, a cooker, and letting an agent drive</title>
+			<link>https://marzer.github.io/blog_2026_08_17.html</link>
+			<guid isPermaLink="false">tag:marzer.github.io,2026-08-17:blog_2026_08_17</guid>
+			<pubDate>Mon, 17 Aug 2026 00:00:00 GMT</pubDate>
+			<description>Undo you can audit, an asset pipeline on the build graph, clustered forward lighting, and what happened when I let Claude drive the editor.</description>
+			<dc:creator>Mark Gillard</dc:creator>
+			<category>c++</category>
+			<category>gamedev</category>
+			<category>engine</category>
+			<category>rendering</category>
+			<category>tooling</category>
 		</item>
 		<item>
 			<title>gg, week 1: something from nothing</title>

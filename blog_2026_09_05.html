@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8"/>
+  <title>Blog » gg, week 5: shapes, sound and a UI | marzer.github.io Personal devblog of Mark 'marzer' Gillard</title>
+  <link href="favicon-light.png" rel="icon" type="image/png"/>
+  <link href="blog_2026_09_06.html" rel="prev"/>
+  <link href="blog_2026_08_30.html" rel="next"/>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <meta content="#cb4b16" name="theme-color"/>
+  <link href="poxy/poxy.css" referrerpolicy="no-referrer" rel="stylesheet"/>
+  <script src="poxy/poxy.js"></script>
+  <script>initialize_theme("light");</script>
+  <meta content="gg, week 5: shapes, sound and a UI" name="twitter:title"/>
+  <meta content="gg, week 5: shapes, sound and a UI" property="og:title"/>
+  <meta content="marzer.github.io" itemprop="name"/>
+  <meta content="Mark Gillard" name="author"/>
+  <meta content="Mark Gillard" property="article:author"/>
+  <meta content="An engine that makes noise and draws a menu, a mixer that never touches the frame loop, and what a month of this actually produced." name="description"/>
+  <meta content="An engine that makes noise and draws a menu, a mixer that never touches the frame loop, and what a month of this actually produced." name="twitter:description"/>
+  <meta content="An engine that makes noise and draws a menu, a mixer that never touches the frame loop, and what a month of this actually produced." property="og:description"/>
+  <meta content="Personal devblog of Mark 'marzer' Gillard" itemprop="description"/>
+  <meta content="telephone=no" name="format-detection"/>
+  <meta content="Poxy v0.27.1" name="generator"/>
+  <meta content="strict-origin-when-cross-origin" name="referrer"/>
+  <link href="feed.xml" rel="alternate" title="marzer.github.io blog" type="application/rss+xml"/>
+<meta content="article" property="og:type"/><meta content="2026-09-05" property="article:published_time"/><meta content="c++" property="article:tag"/><meta content="gamedev" property="article:tag"/><meta content="engine" property="article:tag"/><meta content="audio" property="article:tag"/><meta content="ui" property="article:tag"/><link href="https://marzer.github.io/blog_2026_09_05.html" rel="canonical"/><meta content="https://marzer.github.io/blog_2026_09_05.html" property="og:url"/></head>
+<body class="poxy-has-toc">
+<header><nav id="navigation">
+  <div class="m-container">
+    <div class="m-row">
+      <a class="m-col-t-8 m-col-m-none m-left-m" href="index.html" id="m-navbar-brand">marzer.github.io <span class="m-thin">Personal devblog of Mark 'marzer' Gillard</span></a>
+      <div class="m-col-t-4 m-hide-m m-text-right m-nopadr">
+        <a class="m-doc-search-icon" href="#search" onclick="return showSearch()" title="Search"><svg style="height: 0.9rem;" viewBox="0 0 16 16">
+          <path d="m6 0c-3.31 0-6 2.69-6 6 0 3.31 2.69 6 6 6 1.49 0 2.85-0.541 3.89-1.44-0.0164 0.338 0.147 0.759 0.5 1.15l3.22 3.79c0.552 0.614 1.45 0.665 2 0.115 0.55-0.55 0.499-1.45-0.115-2l-3.79-3.22c-0.392-0.353-0.812-0.515-1.15-0.5 0.895-1.05 1.44-2.41 1.44-3.89 0-3.31-2.69-6-6-6zm0 1.56a4.44 4.44 0 0 1 4.44 4.44 4.44 4.44 0 0 1-4.44 4.44 4.44 4.44 0 0 1-4.44-4.44 4.44 4.44 0 0 1 4.44-4.44z" id="m-doc-search-icon-path"></path>
+        </svg></a>
+        <a href="#navigation" id="m-navbar-show" title="Show navigation"></a>
+        <a href="#" id="m-navbar-hide" title="Hide navigation"></a>
+      </div>
+      <div class="m-col-t-12 m-show-m m-col-m-none m-right-m" id="m-navbar-collapse">
+        <div class="m-row">
+          <ol class="m-col-t-6 m-col-m-none">
+            <li><a href="pages.html">Pages</a></li>
+            <li><a class="poxy-icon repo github poxy-external" href="https://github.com/marzer/marzer.github.io" target="_blank" title="View on GitHub"><svg id="poxy-icon-repo" version="1.1" viewBox="0 0 50 50" xmlns="http://www.w3.org/2000/svg"><path d="M25,1.23a24.37,24.37,0,0,0-7.7,47.5C18.51,49,19,48.2,19,47.56s0-2.12,0-4.15c-6.78,1.47-8.21-3.27-8.21-3.27C9.61,37.33,8,36.58,8,36.58c-2.21-1.51.17-1.48.17-1.48a5.12,5.12,0,0,1,3.73,2.51c2.17,3.72,5.7,2.65,7.09,2a5.25,5.25,0,0,1,1.55-3.26c-5.41-.61-11.1-2.7-11.1-12A9.41,9.41,0,0,1,12,17.79a8.75,8.75,0,0,1,.24-6.45s2-.66,6.7,2.49a23.1,23.1,0,0,1,12.2,0c4.66-3.15,6.7-2.49,6.7-2.49A8.75,8.75,0,0,1,38,17.79a9.41,9.41,0,0,1,2.51,6.54c0,9.36-5.7,11.42-11.13,12a5.83,5.83,0,0,1,1.65,4.51c0,3.26,0,5.89,0,6.69,0,.65.44,1.41,1.68,1.17A24.38,24.38,0,0,0,25,1.23Z" fill="currentColor"></path></svg></a></li>
+          </ol>
+          <ol class="m-col-t-6 m-col-m-none" start="3">
+            <li><a class="poxy-icon theme" href="javascript:void(null);" id="poxy-theme-switch" onclick="toggle_theme(); return false;" role="button" title="Toggle dark and light themes"><svg id="poxy-theme-switch-img" version="1.1" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg"><circle cx="185.6708" cy="183.8122" fill="currentColor" r="65.625"></circle><path d="M185.6708,87.5622a13.1256,13.1256,0,0,0,13.125-13.125V52.5622a13.125,13.125,0,1,0-26.25,0v21.875A13.1257,13.1257,0,0,0,185.6708,87.5622Z" fill="currentColor"></path><path d="M99.051,115.7519a13.1236,13.1236,0,1,0,18.56-18.56L102.1442,81.726a13.1236,13.1236,0,0,0-18.5595,18.56Z" fill="currentColor"></path><path d="M89.4208,183.8122a13.1257,13.1257,0,0,0-13.125-13.125H54.4208a13.125,13.125,0,0,0,0,26.25h21.875A13.1256,13.1256,0,0,0,89.4208,183.8122Z" fill="currentColor"></path><path d="M99.051,251.8725,83.5847,267.3431a13.1236,13.1236,0,1,0,18.56,18.56l15.4663-15.4706a13.1236,13.1236,0,1,0-18.5595-18.56Z" fill="currentColor"></path><path d="M185.6708,280.0622a13.1258,13.1258,0,0,0-13.125,13.125v21.875a13.125,13.125,0,0,0,26.25,0v-21.875A13.1257,13.1257,0,0,0,185.6708,280.0622Z" fill="currentColor"></path><path d="M272.2907,251.8725a13.1236,13.1236,0,1,0-18.56,18.56l15.4663,15.4706a13.1236,13.1236,0,1,0,18.56-18.56Z" fill="currentColor"></path><path d="M330.0458,183.8122a13.1257,13.1257,0,0,0-13.125-13.125h-21.875a13.125,13.125,0,0,0,0,26.25h21.875A13.1256,13.1256,0,0,0,330.0458,183.8122Z" fill="currentColor"></path><path d="M263.0109,119.5971a13.0824,13.0824,0,0,0,9.28-3.8452l15.4663-15.4663a13.1236,13.1236,0,1,0-18.56-18.56L253.7312,97.1923a13.125,13.125,0,0,0,9.28,22.4048Z" fill="currentColor"></path><path d="M456.9379,401.6714a63.97,63.97,0,0,1-14.9963,7.2055c-19.6448,6.5283-41.8787,2.9566-58.1439-9.8523a68.9311,68.9311,0,0,1-10.835-10.8339c-12.8088-16.2663-16.3806-38.5-9.8523-58.1471a63.8444,63.8444,0,0,1,7.2077-14.9931,8.8036,8.8036,0,0,0-10.1172-13.3034,87.5188,87.5188,0,1,0,110.0372,110.04A8.8,8.8,0,0,0,456.9379,401.6714Z" fill="currentColor"></path></svg></a></li>
+            <li><a href="blog.html">Blog</a></li>
+            <li class="m-show-m"><a class="m-doc-search-icon" href="#search" onclick="return showSearch()" title="Search"><svg style="height: 0.9rem;" viewBox="0 0 16 16">
+              <use href="#m-doc-search-icon-path"></use>
+            </svg></a></li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</nav></header>
+<main><article>
+  <div class="m-container m-container-inflatable">
+    <div class="m-row">
+      <div class="m-col-l-10 m-push-l-1">
+        <h1>
+          <span class="m-breadcrumb"><a href="blog.html">Blog</a> »</span>
+          gg, week 5: shapes, sound and a UI
+        </h1><div class="poxy-post-meta"><time class="poxy-post-date" datetime="2026-09-05">5 September 2026</time><span class="poxy-post-tags"><a class="poxy-tag" href="blog_tag_cpp.html">c++</a><a class="poxy-tag" href="blog_tag_gamedev.html">gamedev</a><a class="poxy-tag" href="blog_tag_engine.html">engine</a><a class="poxy-tag" href="blog_tag_audio.html">audio</a><a class="poxy-tag" href="blog_tag_ui.html">ui</a></span></div>
+        <p>An engine that makes noise and draws a menu, a mixer that never touches the frame loop, and what a month of this actually produced.</p>
+        <nav class="m-block m-default poxy-toc" id="poxy-toc">
+          <h3>Contents</h3>
+          <ul>
+            <li><a href="#blog_2026_09_05_shapes_with_nothing_behind_them">Shapes with nothing behind them</a></li>
+            <li><a href="#blog_2026_09_05_more_than_one_game">More than one game</a></li>
+            <li><a href="#blog_2026_09_05_audio_from_nothing">Audio, from nothing</a></li>
+            <li><a href="#blog_2026_09_05_a_user_interface">A user interface</a></li>
+            <li><a href="#blog_2026_09_05_taking_stock">Taking stock</a></li>
+            <li><a href="#blog_2026_09_05_credits">Credits</a></li>
+          </ul>
+        </nav>
+<p>Four weeks in, the renderer is finished enough to leave alone for a bit. This week was the two subsystems a player notices before any of that stuff: the engine made no sound at all, and it couldn't draw a menu.</p><p>Both are in now, along with two smaller things that had to land first.</p><section id="blog_2026_09_05_shapes_with_nothing_behind_them"><h2><a href="#blog_2026_09_05_shapes_with_nothing_behind_them">Shapes with nothing behind them</a></h2><p>A box, a sheet, a disc, a UV sphere, an ico sphere, a cylinder, a cone, a torus and a capsule, all built in-process from a handful of numbers on the entity.</p><p>No source file, no identity index entry, no cooked output, nothing in the cooker. The scene stores the recipe, so the file says "a torus with a tube ratio of 0.3 and 24 segments" and never a hash of one. Every shape is unit-sized, so the entity's transform is the size.</p><a class="poxy-lightbox" href="blog/2026-09-05/primitives.jpg"><img alt="generated primitive shapes standing on a checkerboard floor" class="m-image" src="blog/2026-09-05/primitives.jpg"/></a><p><em>All of it collides, picks, undoes and saves like anything else, because a primitive is a component and the registration layer does the rest.</em></p><p>They exist because blocking out a level with imported meshes is silly, and because the first playable is going to be a greybox. The one wrinkle was identity: a generated shape has no file to mint a uuid against, so it derives one from the parameters that built it, as a version 5 uuid so it can't collide with the minted (version 4) ones. It's really a sharing key more than an identity; two entities asking for the same torus get the same mesh.</p></section><section id="blog_2026_09_05_more_than_one_game"><h2><a href="#blog_2026_09_05_more_than_one_game">More than one game</a></h2><p><code>source/games/&lt;name&gt;</code> holds one game each: sources, a CMakeLists, and a content declaration. <code>GG_GAME</code> picks which one a build compiles and which declaration gets staged into the cooked tree.</p><p>That declaration answers a question the asset pipeline couldn't answer before, which is what ships. Everything cooks, so the editor can browse and place all of it, but only what a game actually reaches should go in the pack, and that's a property of the game, so it lives beside the module that decides it: a list of root scenes to walk transitively, plus named globs for anything the game looks up by name that no scene references.</p><p>Fonts are the worked example, since a font is a closure leaf: no scene references one, so the walk never reaches it, and you'd ship a pack full of text with no face to draw it in.</p><p>Over-stripping is the failure mode nothing else can see. A dangling reference is loud, while an asset that was needed and never reached is silent until a player finds it. So the pack writer classifies every cooked file into exactly one bucket and prints the result by folder, and there's a test that loads each root scene headless with nothing mounted but the pack.</p></section><section id="blog_2026_09_05_audio_from_nothing"><h2><a href="#blog_2026_09_05_audio_from_nothing">Audio, from nothing</a></h2><p>There was literally none. No dependency, no decoder, and <code>SDL_Init</code> wasn't even asking for the audio subsystem.</p><p>SDL owns the device: it opens the default one, follows it when it changes, converts to whatever it wants, and runs the thread that asks for more. Everything above that is engine code, because the event, bus, snapshot and scheduling layer was going to be mine whichever library sat underneath.</p><p>The mix runs on SDL's device thread and touches no engine state at all. The frame thread posts fixed-size POD commands through a single-producer single-consumer ring, the mixer answers through a second ring and a status mailbox, and nothing on the device thread allocates, locks, logs or reads a file: the voice pool, the bus buffers and the limiter's delay line are all sized in the constructor.</p><p>The reason for all that ceremony is a number from week two. The frame loop parked for seconds behind an obscured window (17.7 and 23.3 measured), and a frame costs whatever the GPU decides it costs. Audio riding the frame loop would drop out on every hitch and stop entirely when the window was covered, which is not a thing I'm willing to ship.</p><p>The status is a mailbox instead of a third ring because a ring can refuse a push, and a frame thread that parks stops draining, so the message a full ring would drop is precisely the newest one. That way a dropped event costs promptness and never correctness: the frame side reconciles against the status, a leaked voice slot heals itself, and a replaced wave's old bytes get freed once no slot names them.</p><a class="poxy-lightbox" href="blog/2026-09-05/mixer.jpg"><img alt="the mixer panel, with four bus faders, peak meters and a voice count" class="m-image" src="blog/2026-09-05/mixer.jpg"/></a><p><em>The mixer panel. Buses, peaks, how many voices are sounding, and how long the last block took.</em></p><p>A voice costs about 3 microseconds at unity pitch and about 25 pitched, measured interleaved in one process with the first pass thrown away. Unity is the exact-copy path and anything else runs a Kaiser-windowed sinc interpolator, and that's the whole difference. A full pool of 64 is 0.21 ms of a block at unity and 1.63 ms pitched, which is where 64 comes from as the pool default.</p><p>Above the mixer there are three layers, each of which exists because otherwise the one below it would end up being authored in C++.</p><p>A wave is a recording. It cooks to 48 kHz interleaved PCM16 with integrated loudness and true peak measured per ITU-R BS.1770-4 and written into the file, normalising nothing.</p><p>A sound document is a hand-written TOML file naming one or more waves and the rules over them: random or sequential selection, gain and pitch ranges drawn per play, a bus, polyphony, a cooldown, a priority for when the pool is full, and a loudness target each wave gets levelled to, so a set gathered from four sources at four levels plays at one. A random set never picks the one it just played, which is the entire point of authoring four footsteps instead of one.</p><p>A placement table inside that document says how the sound behaves once it's somewhere: the attenuation law, the distances, an emitter radius that collapses the pan when you stand inside it, a cone, a doppler amount, and what a blocked path does to it. An <code>audio_source</code> component then plays it from wherever its entity stands.</p><p>One thing I haven't decided is what a footstep should key off. A contact already names the terrain layer it's standing on, and the sfx pack files its footsteps by surface, but the two sets don't line up one to one: mud and wood chip map straight across, forest floor and leaf litter have nothing. So the layer name is probably the right key, the mapping from it isn't the identity, and I don't know yet where that mapping should live. On the layer, or beside it. Later.</p><p>Music is streamed. A wave marked as a stream cooks to Opus packets in a table instead of PCM: the demo's music is 1,536,044 bytes raw and 98,541 cooked at 96 kbit/s in 401 packets, read from the mount by range as it plays and decoded on the device thread. Crossfades are equal-power, at -3 dB per ear through the centre.</p><p>And what a bus gives way to is the game's decision, so that's a file too: per-bus gain and low-pass, duck envelopes, and named snapshots with a ramp time. The demo's music ducks under sfx by half, and its pause menu moves the whole mix into a <code>menu</code> snapshot over 0.4 seconds.</p></section><section id="blog_2026_09_05_a_user_interface"><h2><a href="#blog_2026_09_05_a_user_interface">A user interface</a></h2><p>The flat UI layer is one call a frame. A game describes its whole interface as a flat array of nodes and gets one result per node back. The engine solves the layout, animates it, batches it and draws it in one pipeline after the tonemap.</p><a class="poxy-lightbox" href="blog/2026-09-05/ui_gallery.jpg"><img alt="a gallery of UI widgets: type sizes, buttons, checkboxes, sliders, a list, a scroll region, a text field, images" class="m-image" src="blog/2026-09-05/ui_gallery.jpg"/></a><p><em>Nine widget kinds, a theme, and the type ladder they draw with.</em></p><p>Text is cooked. A font goes to one atlas of multi-channel signed distance fields, with every metric in ems, so one cooked font serves every size on screen. Kerning is read out of GPOS by shaping each pair, which is where a modern face typically keeps it: Inter carries no legacy <code>kern</code> table at all, so the path FreeType takes finds nothing in it.</p><p>The cook prints the one number that matters, which is the size below which the type goes soft. Eight texels of distance range over a 48-texel em holds two screen pixels of range down to 12-pixel text, which is about where MSDF stops reading well anyway.</p><p>A distance field is the one cooked thing whose defects are all invisible in its own numbers. A flip, a transpose, a range too narrow for the smallest type, a neighbour bleeding into a glyph: each one is a perfectly plausible field, and each one is obvious the moment you look at a specimen sheet. So the cook writes one, and I look at it.</p><a class="poxy-lightbox" href="blog/2026-09-05/pause_menu.jpg"><img alt="a pause menu over a blurred village" class="m-image" src="blog/2026-09-05/pause_menu.jpg"/></a><p><em>The demo's pause menu. The blur is the frame walked into the existing bloom chain with its prefilter open and the levels normalised, so the cost was one knob.</em></p><p>The theme is a file beside the game's content declaration, because a look is the game's. Colours, a font-size ladder, paddings, radii and transition times, every key optional, re-read on save, and applied whole or not at all, so a document that won't parse leaves the interface somebody is looking at standing.</p><p>The same batch put the tick's input struct across the C ABI waist, so a game module now receives the inputs its tick was fed, and the demo walks a character with them. That's the first bit of phase 8 arriving early.</p></section><section id="blog_2026_09_05_taking_stock"><h2><a href="#blog_2026_09_05_taking_stock">Taking stock</a></h2><p>Five weeks. 24 commits.</p><table class="m-table"><thead><tr><th></th><th>source</th><th>tests</th><th>docs</th><th>shaders</th></tr></thead><tbody><tr><td>4 Aug, phase 0</td><td>4,584</td><td>34</td><td>241</td><td>0</td></tr><tr><td>9 Aug, phase 3</td><td>18,703</td><td>5,673</td><td>14,548</td><td>343</td></tr><tr><td>17 Aug, phase 6.5</td><td>54,725</td><td>19,066</td><td>22,567</td><td>2,365</td></tr><tr><td>23 Aug, terrain and sky</td><td>82,202</td><td>26,117</td><td>25,211</td><td>5,333</td></tr><tr><td>30 Aug, perf</td><td>94,560</td><td>38,483</td><td>28,939</td><td>8,383</td></tr><tr><td>4 Sep, audio and ui</td><td>117,318</td><td>49,508</td><td>31,603</td><td>8,708</td></tr></tbody></table><p><em>Lines of C++, of tests, of markdown, and of Slang.</em></p><p>Also: 1175 test cases, 41 committed golden images, 144 socket verbs, and 29 hand-written dependency recipes.</p><a class="poxy-lightbox" href="blog/2026-09-05/final_scene.jpg"><img alt="the demo village at midday, sunlit, under cumulus" class="m-image" src="blog/2026-09-05/final_scene.jpg"/></a><p><em>Where it ended up. This is the same golden test case as week one's checkerboard room, four weeks on.</em></p><p>What's in there: a fixed-timestep loop with hot reload of game code, shaders and assets; a cooked asset pipeline with minted identity and a mount stack; an in-engine editor with auditable undo and a command socket; Jolt physics over sculptable terrain; a clustered forward renderer with shadows, MSAA, area lights, reflection probes, LODs, impostors and a physically lit sky driven by the scene's clock; a mixer with resident and streamed sound, spatialisation and a declared mix graph; and a flat UI layer with cooked type.</p><p>What isn't: the game. The C ABI waist is still thin, the editor can't author a camera or a spline or a prefab, there's no streaming, and nothing is said about a second region because there's only one.</p><p>If I had to pick two things to tell anyone starting something like this:</p><p class="m-note m-success"><strong>Build the iteration loop first.</strong> Weeks one and two were mostly infrastructure with nothing to photograph, and every week after them was faster for it. The two decisions that paid off the most were fixed timestep plus an offscreen synthetic-time mode, which is what made committed golden images possible at all, and the command socket, which turned "can I test this?" from an afternoon's work into a script.</p><p class="m-note m-success"><strong>Instruments before features, every time.</strong> Nearly every entry in these five posts that reads as a debugging story is really a story about a missing instrument. The occluded-window hang needed a diagnostic that named which GPU call blocked. The overdraw finding needed the overdraw view before the sort it was meant to judge. The moon's phase needed a verb reporting an illuminated fraction, because an image can't be its own oracle. The engine has 59 debug views now, and every one of them exists because something was invisible once.</p><p>Next is phase 7 and phase 8: springs and animation blending, and then an actual traversal slice, with a greybox forest edge, four waystones and a glide. Which means the next of these posts might finally be about a game.</p></section><section id="blog_2026_09_05_credits"><h2><a href="#blog_2026_09_05_credits">Credits</a></h2><p>Everything in these shots that isn't engine is bought or borrowed:</p><ul><li>The buildings, props, trees, foliage and rocks are <a class="poxy-external" href="https://quaternius.com/" target="_blank">Quaternius</a> kits: the Medieval Village and Stylized Nature MegaKits, bought as the paid source versions, plus the free Ultimate Stylized Nature set. All of it is released CC0, and he takes Patreon support.</li><li>The ground materials are <a class="poxy-external" href="https://polyhaven.com/" target="_blank">Poly Haven</a> textures, CC0.</li><li>The sound effects are Imphenzia's <a class="poxy-external" href="https://www.imphenzia.com/universal-sound-fx" target="_blank">Universal Sound FX</a>, under a purchased licence. That licence covers the sounds inside a game and not passing them on as sounds, which is why the pack I build from them is private.</li><li>The type is <a class="poxy-external" href="https://rsms.me/inter/" target="_blank">Inter</a> by Rasmus Andersson, under the SIL Open Font License.</li></ul></section>
+        <div class="m-note m-dim m-thin m-text-center"><a class="m-doc" href="blog_2026_09_06.html">« gg, jam 1: undercooked</a> | <a class="m-doc" href="blog.html">Blog</a> | <a class="m-doc" href="blog_2026_08_30.html">gg, week 4: clouds, scale, and taking the look back out »</a></div>
+      </div>
+    </div>
+  </div>
+</article></main>
+<div class="m-doc-search" id="search">
+  <a href="#!" onclick="return hideSearch()"></a>
+  <div class="m-container">
+    <div class="m-row">
+      <div class="m-col-m-8 m-push-m-2">
+        <div class="m-doc-search-header m-text m-small">
+          <div><span class="m-label m-default">Tab</span> / <span class="m-label m-default">T</span> to search, <span class="m-label m-default">Esc</span> to close</div>
+          <div id="search-symbolcount">…</div>
+        </div>
+        <div class="m-doc-search-content">
+          <form>
+            <input autocomplete="off" autofocus="autofocus" disabled="disabled" id="search-input" name="q" placeholder="Loading …" spellcheck="false" type="search"/>
+          </form>
+          <noscript class="m-text m-danger m-text-center">Unlike everything else in the docs, the search functionality <em>requires</em> JavaScript.</noscript>
+          <div class="m-text m-dim m-text-center" id="search-help">
+            <p class="m-noindent">Search for symbols, directories, files, pages or
+            modules. You can omit any prefix from the symbol or file path; adding a
+            <code>:</code> or <code>/</code> suffix lists all members of given symbol or
+            directory.</p>
+            <p class="m-noindent">Use <span class="m-label m-dim">↓</span>
+            / <span class="m-label m-dim">↑</span> to navigate through the list,
+            <span class="m-label m-dim">Enter</span> to go.
+            <span class="m-label m-dim">Tab</span> autocompletes common prefix, you can
+            copy a link to the result using <span class="m-label m-dim">⌘</span>
+            <span class="m-label m-dim">L</span> while <span class="m-label m-dim">⌘</span>
+            <span class="m-label m-dim">M</span> produces a Markdown link.</p>
+          </div>
+          <div class="m-text m-warning m-text-center" id="search-notfound">Sorry, nothing was found.</div>
+          <ul id="search-results"></ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="search-v2.js"></script><script>install_mcss_search_shim();</script>
+<script async="async" src="searchdata-v2.js"></script>
+<footer><nav>
+  <div class="m-container">
+    <div class="m-row">
+      <div class="m-col-l-10 m-push-l-1">
+        
+<a class="poxy-external" href="https://github.com/marzer/marzer.github.io" target="_blank">GitHub</a>
+• <a class="poxy-external" href="https://github.com/marzer/marzer.github.io/issues" target="_blank">Report an issue</a>
+• <span class="poxy-dead-link">Feed</span>
+<br/><br/>
+Site generated using <a class="poxy-external" href="https://github.com/marzer/poxy/" target="_blank">Poxy</a>
+
+      </div>
+    </div>
+  </div>
+</nav></footer>
+
+
+</body></html>
