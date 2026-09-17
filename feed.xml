@@ -5,7 +5,20 @@
 		<link>https://marzer.github.io/</link>
 		<description>Personal devblog of Mark 'marzer' Gillard</description>
 		<atom:link href="https://marzer.github.io/feed.xml" rel="self" type="application/rss+xml" />
-		<pubDate>Sun, 06 Sep 2026 00:00:00 GMT</pubDate>
+		<pubDate>Thu, 17 Sep 2026 00:00:00 GMT</pubDate>
+		<item>
+			<title>gg, weeks 6 and 7: weather, TAA, and a flag day for Vulkan</title>
+			<link>https://marzer.github.io/blog_2026_09_17.html</link>
+			<guid isPermaLink="false">tag:marzer.github.io,2026-09-17:blog_2026_09_17</guid>
+			<pubDate>Thu, 17 Sep 2026 00:00:00 GMT</pubDate>
+			<description>Weather driven off the scene clock, TAA after a month of arguing against it, the SDL fork retired along with SDL_GPU, and the first half of water.</description>
+			<dc:creator>Mark Gillard</dc:creator>
+			<category>c++</category>
+			<category>gamedev</category>
+			<category>engine</category>
+			<category>rendering</category>
+			<category>vulkan</category>
+		</item>
 		<item>
 			<title>gg, jam 1: undercooked</title>
 			<link>https://marzer.github.io/blog_2026_09_06.html</link>
