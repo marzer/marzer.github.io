@@ -5,7 +5,20 @@
 		<link>https://marzer.github.io/</link>
 		<description>Personal devblog of Mark 'marzer' Gillard</description>
 		<atom:link href="https://marzer.github.io/feed.xml" rel="self" type="application/rss+xml" />
-		<pubDate>Thu, 17 Sep 2026 00:00:00 GMT</pubDate>
+		<pubDate>Tue, 13 Oct 2026 00:00:00 GMT</pubDate>
+		<item>
+			<title>gg, weeks 8 to 11: a pond, fog, night, and a month on a laptop</title>
+			<link>https://marzer.github.io/blog_2026_10_13.html</link>
+			<guid isPermaLink="false">tag:marzer.github.io,2026-10-13:blog_2026_10_13</guid>
+			<pubDate>Tue, 13 Oct 2026 00:00:00 GMT</pubDate>
+			<description>Four weeks on a laptop with an integrated GPU: the pond gets a surface, fog becomes a medium, the goldens leave git, and night stops being black.</description>
+			<dc:creator>Mark Gillard</dc:creator>
+			<category>c++</category>
+			<category>gamedev</category>
+			<category>engine</category>
+			<category>rendering</category>
+			<category>vulkan</category>
+		</item>
 		<item>
 			<title>gg, weeks 6 and 7: weather, TAA, and a flag day for Vulkan</title>
 			<link>https://marzer.github.io/blog_2026_09_17.html</link>
