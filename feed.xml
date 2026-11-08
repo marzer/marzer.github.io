@@ -5,7 +5,20 @@
 		<link>https://marzer.github.io/</link>
 		<description>Personal devblog of Mark 'marzer' Gillard</description>
 		<atom:link href="https://marzer.github.io/feed.xml" rel="self" type="application/rss+xml" />
-		<pubDate>Tue, 13 Oct 2026 00:00:00 GMT</pubDate>
+		<pubDate>Sun, 08 Nov 2026 00:00:00 GMT</pubDate>
+		<item>
+			<title>gg, weeks 12 to 15: rain, snow, lightning, and back on the 3070</title>
+			<link>https://marzer.github.io/blog_2026_11_08.html</link>
+			<guid isPermaLink="false">tag:marzer.github.io,2026-11-08:blog_2026_11_08</guid>
+			<pubDate>Sun, 08 Nov 2026 00:00:00 GMT</pubDate>
+			<description>Back on the desktop: the weather starts dropping things, the goldens move onto the GPU, a scene gets more than one body to steer, and leaves hang off branches.</description>
+			<dc:creator>Mark Gillard</dc:creator>
+			<category>c++</category>
+			<category>gamedev</category>
+			<category>engine</category>
+			<category>rendering</category>
+			<category>weather</category>
+		</item>
 		<item>
 			<title>gg, weeks 8 to 11: a pond, fog, night, and a month on a laptop</title>
 			<link>https://marzer.github.io/blog_2026_10_13.html</link>
